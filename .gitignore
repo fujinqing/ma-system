@@ -1,0 +1,15 @@
+node_modules
+.DS_Store
+*.log
+.env
+.env.local
+dist
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+server/backups/*.bak
+*.bak

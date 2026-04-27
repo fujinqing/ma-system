@@ -1,0 +1,35 @@
+const db = require('../config/database');
+const sql = db.sql;
+const fs = require('fs');
+const path = require('path');
+
+async function updateUsersData() {
+  try {
+    console.log('正在获取共享数据库连接...');
+    const pool = await db.getPool();
+    console.log('已连接到共享数据库连接池');
+
+    // 读取 SQL 文件
+    const sqlFilePath = path.join(__dirname, 'update_users_data.sql');
+    const sqlQuery = fs.readFileSync(sqlFilePath, 'utf8');
+
+    console.log('正在执行 SQL 更新...');
+    
+    // 执行 SQL 脚本
+    const result = await pool.request().query(sqlQuery);
+    
+    console.log('\n✅ 用户数据更新完成！');
+    console.log('更新的用户列表：');
+    console.log(result.recordset);
+
+    await db.closePool();
+    console.log('\n数据库连接已关闭（已释放共享连接）');
+    
+  } catch (error) {
+    console.error('❌ 更新失败:', error);
+    process.exit(1);
+  }
+}
+
+// 运行更新
+updateUsersData();

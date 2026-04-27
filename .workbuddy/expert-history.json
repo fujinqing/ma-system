@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "sessions": {
+    "ea5e2d4ad4764a86abcd0d1e76600306": [
+      {
+        "expertId": "DevOpsAutomationEngineer",
+        "name": "一键达",
+        "profession": "DevOps自动化工程师",
+        "avatarUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/avatars/02-Engineering/DevOpsAutomationEngineer/DevOpsAutomationEngineer.png",
+        "promptUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/experts/02-Engineering/DevOpsAutomationEngineer/DevOpsAutomationEngineer_zh.md",
+        "usedAt": 1777187009959,
+        "industryId": "all"
+      }
+    ]
+  },
+  "lastUpdated": 1777187027158
+}
