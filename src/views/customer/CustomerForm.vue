@@ -38,6 +38,18 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
+            <el-form-item label="企业类别" prop="enterprise_category">
+              <el-select v-model="customerForm.enterprise_category" placeholder="请选择企业类别" style="width: 100%">
+                <el-option label="设备厂商" value="equipment_vendor"></el-option>
+                <el-option label="集成商" value="integrator"></el-option>
+                <el-option label="终端客户" value="end_customer"></el-option>
+                <el-option label="代理商" value="agent"></el-option>
+                <el-option label="外协厂" value="subcontractor"></el-option>
+                <el-option label="贸易商" value="trader"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="客户池" prop="customer_pool_type">
               <el-select v-model="customerForm.customer_pool_type" placeholder="请选择客户池" style="width: 100%">
                 <el-option label="公海" value="public"></el-option>
@@ -55,15 +67,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="6">
-            <el-form-item label="客户状态" prop="status">
-              <el-select v-model="customerForm.status" placeholder="请选择客户状态" style="width: 100%">
-                <el-option label="活跃" value="active"></el-option>
-                <el-option label="冻结" value="frozen"></el-option>
-                <el-option label="流失" value="lost"></el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
@@ -74,6 +77,8 @@
                 <el-option label="客户推荐" value="referral"></el-option>
                 <el-option label="展会获客" value="exhibition"></el-option>
                 <el-option label="电话营销" value="telemarketing"></el-option>
+                <el-option label="主动开发" value="active_dev"></el-option>
+                <el-option label="渠道推荐" value="channel"></el-option>
                 <el-option label="其他" value="other"></el-option>
               </el-select>
             </el-form-item>
@@ -81,14 +86,63 @@
           <el-col :span="12">
             <el-form-item label="所属行业" prop="industry">
               <el-select v-model="customerForm.industry" placeholder="请选择所属行业" style="width: 100%">
-                <el-option label="3C" value="3c"></el-option>
+                <el-option label="汽车零部件" value="auto_parts"></el-option>
+                <el-option label="3C电子" value="3c"></el-option>
                 <el-option label="光伏" value="photovoltaic"></el-option>
                 <el-option label="新能源" value="new_energy"></el-option>
-                <el-option label="汽配" value="auto_parts"></el-option>
-                <el-option label="医疗" value="medical"></el-option>
-                <el-option label="食品" value="food"></el-option>
+                <el-option label="半导体" value="semiconductor"></el-option>
+                <el-option label="医疗设备" value="medical"></el-option>
+                <el-option label="食品饮料" value="food"></el-option>
+                <el-option label="工程机械" value="engineering"></el-option>
+                <el-option label="航空航天" value="aerospace"></el-option>
+                <el-option label="轨道交通" value="railway"></el-option>
                 <el-option label="其他" value="other"></el-option>
               </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="设备类型" prop="equipment_type">
+              <el-select v-model="customerForm.equipment_type" placeholder="请选择设备类型" style="width: 100%">
+                <el-option label="非标自动化" value="custom_automation"></el-option>
+                <el-option label="标准设备" value="standard_equipment"></el-option>
+                <el-option label="工装夹具" value="fixture"></el-option>
+                <el-option label="检测设备" value="testing"></el-option>
+                <el-option label="机器人" value="robot"></el-option>
+                <el-option label="生产线" value="production_line"></el-option>
+                <el-option label="其他" value="other"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="年采购量" prop="annual_purchase_amount">
+              <el-input v-model="customerForm.annual_purchase_amount" placeholder="请输入年采购量">
+                <template #append>万元</template>
+              </el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="合作等级" prop="cooperation_level">
+              <el-select v-model="customerForm.cooperation_level" placeholder="请选择合作等级" style="width: 100%">
+                <el-option label="战略合作" value="strategic"></el-option>
+                <el-option label="优先供应商" value="preferred"></el-option>
+                <el-option label="合格供应商" value="qualified"></el-option>
+                <el-option label="备选供应商" value="alternative"></el-option>
+                <el-option label="新开发" value="new"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="所在区域" prop="region">
+              <el-input v-model="customerForm.region" placeholder="请输入所在区域/省份"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="主营设备" prop="main_equipment">
+              <el-input v-model="customerForm.main_equipment" placeholder="请输入主营设备或产品" type="textarea"></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -276,11 +330,17 @@ export default {
         name: '',
         short_name: '',
         customer_type: 'potential',
+        enterprise_category: '',
         customer_pool_type: 'public',
         level: 'normal',
         status: 'active',
         source: '',
         industry: '',
+        equipment_type: '',
+        annual_purchase_amount: '',
+        cooperation_level: '',
+        region: '',
+        main_equipment: '',
         factory_address: '',
         company_scale: '',
         cooperation_years: null,

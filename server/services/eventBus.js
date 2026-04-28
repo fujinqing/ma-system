@@ -1,7 +1,7 @@
 const EventEmitter = require('events');
-const { createEvent } = require('./eventSchema');
+const { ALL_EVENT_NAMES } = require('./eventSchema');
 
-const SOURCE_SYSTEM = 'M-A-SYSTEM';
+const SOURCE_SYSTEM = 'ma-system';
 
 class EventBus extends EventEmitter {
   constructor() {
@@ -9,32 +9,39 @@ class EventBus extends EventEmitter {
     this.setMaxListeners(100);
     this.eventHistory = [];
     this.maxHistorySize = 1000;
+    this.subscriptionCount = {};
   }
 
   validateEvent(event) {
-    const requiredFields = ['id', 'timestamp', 'sourceSystem', 'businessType', 'action', 'entityData'];
-    for (const field of requiredFields) {
-      if (!event[field]) {
-        throw new Error(`Invalid event: missing required field '${field}'`);
-      }
+    if (!event || typeof event !== 'object') {
+      throw new Error('Invalid event: must be an object');
     }
-    return true;
+
+    if (event.header) {
+      const requiredFields = ['eventId', 'eventName', 'eventTime', 'sourceModule', 'tenantId', 'operatorId', 'operatorName', 'eventVersion', 'traceId', 'retryCount'];
+      for (const field of requiredFields) {
+        if (event.header[field] === undefined) {
+          console.warn(`[EventBus] Event header missing field '${field}', using default`);
+        }
+      }
+      return true;
+    }
+
+    if (event.id && event.timestamp && event.sourceSystem) {
+      return true;
+    }
+
+    throw new Error('Invalid event: missing standard header or legacy fields');
   }
 
   publish(eventName, payload) {
     try {
       let event;
 
-      if (this.isStandardEvent(payload)) {
+      if (this.isStandardEventFormat(payload)) {
         event = payload;
       } else {
-        event = createEvent(
-          payload.businessType || 'unknown',
-          payload.action || 'update',
-          payload.entityData || payload,
-          payload.operator || null,
-          payload.extra || {}
-        );
+        throw new Error('Event must use standard header + body format');
       }
 
       this.validateEvent(event);
@@ -51,7 +58,11 @@ class EventBus extends EventEmitter {
         this.emit(eventName, event);
       });
 
-      console.log(`[EventBus] Published: ${eventName}`, JSON.stringify(event, null, 2));
+      console.log(`[EventBus] Published: ${eventName}`, {
+        eventId: event.header?.eventId || event.id,
+        eventName: event.header?.eventName || eventName,
+        traceId: event.header?.traceId
+      });
       return event;
     } catch (error) {
       console.error(`[EventBus] Failed to publish event '${eventName}':`, error.message);
@@ -59,11 +70,16 @@ class EventBus extends EventEmitter {
     }
   }
 
-  isStandardEvent(payload) {
-    return payload && payload.id && payload.timestamp && payload.sourceSystem;
+  isStandardEventFormat(payload) {
+    return payload && payload.header && payload.body;
   }
 
   subscribe(eventName, handler) {
+    if (!this.subscriptionCount[eventName]) {
+      this.subscriptionCount[eventName] = 0;
+    }
+    this.subscriptionCount[eventName]++;
+
     this.on(eventName, async (event) => {
       try {
         await handler(event);
@@ -71,14 +87,14 @@ class EventBus extends EventEmitter {
         console.error(`[EventBus] Handler error for '${eventName}':`, error.message);
       }
     });
-    console.log(`[EventBus] Subscribed to: ${eventName}`);
+    console.log(`[EventBus] Subscribed to: ${eventName} (count: ${this.subscriptionCount[eventName]})`);
   }
 
   subscribeAsync(eventName, handler) {
     this.on(eventName, async (event) => {
       try {
         const result = await handler(event);
-        console.log(`[EventBus] Async handler completed for '${eventName}':`, event.id);
+        console.log(`[EventBus] Async handler completed for '${eventName}':`, event.header?.eventId);
         return result;
       } catch (error) {
         console.error(`[EventBus] Async handler error for '${eventName}':`, error.message);
@@ -87,8 +103,18 @@ class EventBus extends EventEmitter {
     });
   }
 
+  subscribeAll(handler) {
+    for (const eventName of ALL_EVENT_NAMES) {
+      this.subscribe(eventName, handler);
+    }
+    console.log(`[EventBus] Subscribed to all ${ALL_EVENT_NAMES.length} events`);
+  }
+
   unsubscribe(eventName, handler) {
     this.off(eventName, handler);
+    if (this.subscriptionCount[eventName]) {
+      this.subscriptionCount[eventName]--;
+    }
     console.log(`[EventBus] Unsubscribed from: ${eventName}`);
   }
 
@@ -113,6 +139,22 @@ class EventBus extends EventEmitter {
 
   getEventTypes() {
     return [...new Set(this.eventHistory.map(h => h.eventName))];
+  }
+
+  getSubscriptionCount(eventName = null) {
+    if (eventName) {
+      return this.subscriptionCount[eventName] || 0;
+    }
+    return { ...this.subscriptionCount };
+  }
+
+  getStats() {
+    return {
+      totalEvents: this.eventHistory.length,
+      eventTypes: this.getEventTypes().length,
+      subscriptions: this.getSubscriptionCount(),
+      maxHistorySize: this.maxHistorySize
+    };
   }
 }
 

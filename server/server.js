@@ -25,8 +25,16 @@ const teamRoutes = require('./routes/teamRoutes');
 const competitorRoutes = require('./routes/competitorRoutes');
 const operationLogRoutes = require('./routes/operationLogRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
+const mdmRoutes = require('./routes/mdmRoutes');
+const workflowRoutes = require('./routes/workflowRoutes');
+const eventBus = require('./services/eventBus');
+const mdmEventPublisher = require('./services/mdmEventPublisher');
+const eventPublisher = require('./services/eventPublisher');
 const { rateLimiter } = require('./middleware/rateLimiter');
 const { cache } = require('./middleware/cache');
+
+mdmEventPublisher.setEventBus(eventBus);
+eventPublisher.setEventBus(eventBus);
 
 // 创建Express应用
 const app = express();
@@ -220,6 +228,8 @@ app.use('/api/rd', rdRoutes);
 app.use('/api', competitorRoutes);
 app.use('/api/system', operationLogRoutes);
 app.use('/api/finance', expenseRoutes);
+app.use('/api/mdm', mdmRoutes);
+app.use('/api/workflow', workflowRoutes);
 
 // 导入数据库备份工具
 const dbBackup = require('./utils/dbBackup');

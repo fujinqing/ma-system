@@ -38,4 +38,8 @@ router.post('/:id/release', authenticateToken, customerController.releaseCustome
 router.get('/:customerId/pool-logs', authenticateToken, customerController.getCustomerPoolLogs);
 router.get('/pool/statistics', authenticateToken, customerController.getCustomerPoolStatistics);
 
+// 客户审批流程路由
+router.post('/:id/submit-approval', authenticateToken, customerController.submitCustomerApproval);
+router.get('/approvals/list', authenticateToken, customerController.getCustomerApprovalList);
+
 module.exports = router;

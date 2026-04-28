@@ -1,0 +1,110 @@
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "npx",
+      "args": ["-y", "mssql-mcp@latest"],
+      "env": {
+        "DB_SERVER": "localhost\\TEW_SQLEXPRESS4",
+        "DB_PORT": "1433",
+        "DB_DATABASE": "M-A_OP_ODB",
+        "DB_USER": "sa",
+        "DB_PASSWORD": "M-A_SYSTEM_2026",
+        "DB_ENCRYPT": "false",
+        "DB_TRUST_SERVER_CERTIFICATE": "true",
+        "DB_CONNECTION_TIMEOUT": "60000",
+        "DB_REQUEST_TIMEOUT": "60000"
+      }
+    },
+
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@latest"],
+      "env": {
+        "ALLOWED_DIRECTORIES": "D:\\M-A_SYSTEM\\frontend"
+      }
+    },
+
+    "git": {
+      "command": "npx",
+      "args": ["-y", "git-mcp-server@latest"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+
+    "docker": {
+      "command": "npx",
+      "args": ["-y", "docker-mcp@latest"],
+      "disabled": true
+    },
+
+    "api": {
+      "command": "npx",
+      "args": ["-y", "api-mcp-server@latest"]
+    },
+
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sentry@latest"],
+      "env": {
+        "SENTRY_DSN": "https://xxxxx@sentry.io/xxxxx"
+      },
+      "disabled": true
+    },
+
+    "gitlab": {
+      "command": "npx",
+      "args": ["-y", "gitlab-mcp-server@latest"],
+      "env": {
+        "GITLAB_TOKEN": "your-gitlab-token",
+        "GITLAB_URL": "https://gitlab.com"
+      },
+      "disabled": true
+    },
+
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest"],
+      "env": {
+        "SLACK_BOT_TOKEN": "xoxb-your-slack-bot-token",
+        "SLACK_TEAM_ID": "your-team-id"
+      },
+      "disabled": true
+    },
+
+    "redis": {
+      "command": "npx",
+      "args": ["-y", "redis-mcp@latest"],
+      "env": {
+        "REDIS_HOST": "localhost",
+        "REDIS_PORT": "6379",
+        "REDIS_PASSWORD": "",
+        "REDIS_DB": "0"
+      }
+    },
+
+    "postgresql": {
+      "command": "npx",
+      "args": ["-y", "postgresql-mcp-server@latest"],
+      "env": {
+        "PG_HOST": "localhost",
+        "PG_PORT": "5432",
+        "PG_DATABASE": "ma_system",
+        "PG_USER": "postgres",
+        "PG_PASSWORD": "postgres"
+      }
+    },
+
+    "rabbitmq": {
+      "command": "npx",
+      "args": ["-y", "rabbitmq-mcp@latest"],
+      "env": {
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_PORT": "5672",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest",
+        "RABBITMQ_VHOST": "/"
+      }
+    }
+  }
+}

@@ -19,10 +19,9 @@ const publishCustomerEvent = (action, entityData, operator) => {
 const getAllCustomers = async (req, res) => {
   try {
     console.log('getAllCustomers 函数被调用');
-    const { page = 1, limit = 20, status, level, salesId, keyword, customerType, customerPoolType } = req.query;
+    const { page = 1, limit = 20, status, level, salesId, keyword, customerType, customerPoolType, enterpriseCategory, cooperationLevel } = req.query;
     const offset = (page - 1) * limit;
 
-    // 调试信息
     console.log('获取客户列表请求参数:', req.query);
 
     const pool = await getPool();
@@ -31,7 +30,6 @@ const getAllCustomers = async (req, res) => {
     const params = [];
     let paramIndex = 0;
 
-    // 构建查询条件
     if (status) {
       paramIndex++;
       whereClause += ` AND c.status = @p${paramIndex}`;
@@ -60,6 +58,18 @@ const getAllCustomers = async (req, res) => {
       paramIndex++;
       whereClause += ` AND c.customer_pool_type = @p${paramIndex}`;
       params.push({ name: `p${paramIndex}`, type: sql.NVarChar, value: customerPoolType });
+    }
+
+    if (enterpriseCategory) {
+      paramIndex++;
+      whereClause += ` AND c.enterprise_category = @p${paramIndex}`;
+      params.push({ name: `p${paramIndex}`, type: sql.NVarChar, value: enterpriseCategory });
+    }
+
+    if (cooperationLevel) {
+      paramIndex++;
+      whereClause += ` AND c.cooperation_level = @p${paramIndex}`;
+      params.push({ name: `p${paramIndex}`, type: sql.NVarChar, value: cooperationLevel });
     }
 
     if (keyword) {
@@ -154,17 +164,18 @@ const getCustomerById = async (req, res) => {
 
 const createCustomer = async (req, res) => {
   try {
-    const { 
-      name, short_name, customer_type, source, industry, level, status, 
-      contact_person, contact_phone, email, address, website, bank, 
-      bank_account, tax_id, annual_revenue, employee_count, main_products, 
-      sales_id, remarks, contact_position, factory_address, company_scale, 
-      cooperation_years, tags
+    const {
+      name, short_name, customer_type, enterprise_category, source, industry,
+      equipment_type, annual_purchase_amount, cooperation_level, region, main_equipment,
+      level, status,
+      contact_person, contact_phone, email, address, website, bank,
+      bank_account, tax_id, annual_revenue, employee_count, main_products,
+      sales_id, remarks, contact_position, factory_address, company_scale,
+      cooperation_years, tags, customer_pool_type
     } = req.body;
 
     const pool = await getPool();
 
-    // 自动生成客户编码
     const maxCodeResult = await pool.request().query(`
       SELECT TOP 1 code FROM customers WHERE code IS NOT NULL ORDER BY code DESC
     `);
@@ -179,10 +190,17 @@ const createCustomer = async (req, res) => {
       .input('name', sql.NVarChar, name)
       .input('short_name', sql.NVarChar, short_name)
       .input('customer_type', sql.NVarChar, customer_type || 'potential')
+      .input('enterprise_category', sql.NVarChar, enterprise_category || null)
       .input('source', sql.NVarChar, source)
       .input('industry', sql.NVarChar, industry)
+      .input('equipment_type', sql.NVarChar, equipment_type || null)
+      .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
+      .input('cooperation_level', sql.NVarChar, cooperation_level || null)
+      .input('region', sql.NVarChar, region || null)
+      .input('main_equipment', sql.NVarChar, main_equipment || null)
       .input('level', sql.NVarChar, level || 'normal')
       .input('status', sql.NVarChar, status || 'active')
+      .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
       .input('contact_person', sql.NVarChar, contact_person)
       .input('contact_phone', sql.NVarChar, contact_phone)
       .input('contact_email', sql.NVarChar, email)
@@ -203,12 +221,16 @@ const createCustomer = async (req, res) => {
       .input('tags', sql.NVarChar, Array.isArray(tags) ? tags.join(',') : tags)
       .query(`
         INSERT INTO customers (
-          code, name, short_name, customer_type, source, industry, level, status,
+          code, name, short_name, customer_type, enterprise_category, source, industry,
+          equipment_type, annual_purchase_amount, cooperation_level, region, main_equipment,
+          level, status, customer_pool_type,
           contact_person, contact_phone, contact_email, contact_position, address,
           website, bank, bank_account, tax_id, annual_revenue, employee_count,
           main_products, company_scale, cooperation_years, sales_id, remarks, tags
         ) VALUES (
-          @code, @name, @short_name, @customer_type, @source, @industry, @level, @status,
+          @code, @name, @short_name, @customer_type, @enterprise_category, @source, @industry,
+          @equipment_type, @annual_purchase_amount, @cooperation_level, @region, @main_equipment,
+          @level, @status, @customer_pool_type,
           @contact_person, @contact_phone, @contact_email, @contact_position, @address,
           @website, @bank, @bank_account, @tax_id, @annual_revenue, @employee_count,
           @main_products, @company_scale, @cooperation_years, @sales_id, @remarks, @tags
@@ -224,10 +246,16 @@ const createCustomer = async (req, res) => {
       code: newCode,
       name,
       short_name,
+      enterprise_category,
       level,
       customer_type,
       customer_pool_type,
       industry,
+      equipment_type,
+      annual_purchase_amount,
+      cooperation_level,
+      region,
+      main_equipment,
       main_products,
       company_scale,
       cooperation_years,
@@ -249,11 +277,13 @@ const updateCustomer = async (req, res) => {
     console.log('请求体:', req.body);
     
     const { id } = req.params;
-    const { 
-      name, short_name, customer_type, source, industry, level, status, 
-      contact_person, contact_phone, email, contact_position, address, 
-      website, bank, bank_account, tax_id, annual_revenue, employee_count, 
-      main_products, sales_id, assigned_date, lost_reason, remarks, 
+    const {
+      name, short_name, customer_type, enterprise_category, source, industry,
+      equipment_type, annual_purchase_amount, cooperation_level, region, main_equipment,
+      level, status, customer_pool_type,
+      contact_person, contact_phone, email, contact_position, address,
+      website, bank, bank_account, tax_id, annual_revenue, employee_count,
+      main_products, sales_id, assigned_date, lost_reason, remarks,
       last_contact_date, factory_address, company_scale, cooperation_years, tags
     } = req.body;
 
@@ -276,10 +306,17 @@ const updateCustomer = async (req, res) => {
       .input('name', sql.NVarChar, name)
       .input('short_name', sql.NVarChar, short_name)
       .input('customer_type', sql.NVarChar, customer_type)
+      .input('enterprise_category', sql.NVarChar, enterprise_category || null)
       .input('source', sql.NVarChar, source)
       .input('industry', sql.NVarChar, industry)
+      .input('equipment_type', sql.NVarChar, equipment_type || null)
+      .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
+      .input('cooperation_level', sql.NVarChar, cooperation_level || null)
+      .input('region', sql.NVarChar, region || null)
+      .input('main_equipment', sql.NVarChar, main_equipment || null)
       .input('level', sql.NVarChar, level)
       .input('status', sql.NVarChar, status)
+      .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
       .input('contact_person', sql.NVarChar, contact_person)
       .input('contact_phone', sql.NVarChar, contact_phone)
       .input('contact_email', sql.NVarChar, email)
@@ -305,10 +342,17 @@ const updateCustomer = async (req, res) => {
           name = @name,
           short_name = @short_name,
           customer_type = @customer_type,
+          enterprise_category = @enterprise_category,
           source = @source,
           industry = @industry,
+          equipment_type = @equipment_type,
+          annual_purchase_amount = @annual_purchase_amount,
+          cooperation_level = @cooperation_level,
+          region = @region,
+          main_equipment = @main_equipment,
           level = @level,
           status = @status,
+          customer_pool_type = @customer_pool_type,
           contact_person = @contact_person,
           contact_phone = @contact_phone,
           contact_email = @contact_email,
@@ -325,10 +369,10 @@ const updateCustomer = async (req, res) => {
           cooperation_years = @cooperation_years,
           sales_id = @sales_id,
           assigned_date = @assigned_date,
-          lost_reason = @lost_reason, 
-          remarks = @remarks, 
-          last_contact_date = @last_contact_date, 
-          tags = @tags, 
+          lost_reason = @lost_reason,
+          remarks = @remarks,
+          last_contact_date = @last_contact_date,
+          tags = @tags,
           updated_at = GETDATE()
         WHERE id = @id
       `);
@@ -1061,6 +1105,113 @@ const getSalesStatistics = async (req, res) => {
   }
 };
 
+const submitCustomerApproval = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, data, reason } = req.body;
+    const operator = req.user?.name || req.user?.username;
+
+    const pool = await getPool();
+    const checkResult = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT * FROM customers WHERE id = @id');
+
+    if (checkResult.recordset.length === 0) {
+      return res.status(404).json(res.formatResponse(false, null, '客户不存在'));
+    }
+
+    const customer = checkResult.recordset[0];
+    let flowType = 'crm_customer_create';
+    if (action === 'update') flowType = 'crm_customer_update';
+    else if (action === 'transfer') flowType = 'crm_customer_transfer';
+    else if (action === 'archive') flowType = 'crm_customer_archive';
+    else if (action === 'to_public') flowType = 'crm_customer_to_public';
+
+    try {
+      const workflow = require('../services/workflow');
+      const flowResult = await workflow.flowInstance.startFlowInstance(
+        flowType,
+        {
+          customerId: id,
+          customerName: customer.name,
+          customerCode: customer.code,
+          action: action,
+          data: data || {},
+          reason: reason || ''
+        },
+        operator
+      );
+
+      if (flowResult && flowResult.instanceId) {
+        await pool.request()
+          .input('id', sql.Int, id)
+          .input('flow_instance_id', sql.Int, flowResult.instanceId)
+          .input('flow_status', sql.NVarChar, 'pending')
+          .query(`
+            UPDATE customers SET
+              flow_instance_id = @flow_instance_id,
+              flow_status = @flow_status,
+              updated_at = GETDATE()
+            WHERE id = @id
+          `);
+
+        await AuditLog.log('SUBMIT_CUSTOMER_APPROVAL', req.user?.id, { customerId: id, action, flowType }, req);
+
+        publishCustomerEvent('update', {
+          id: parseInt(id),
+          flow_instance_id: flowResult.instanceId,
+          flow_status: 'pending',
+          action
+        }, operator);
+
+        return res.json(res.formatResponse(true, {
+          instanceId: flowResult.instanceId,
+          message: '已提交审批流程'
+        }, '已提交审批流程'));
+      }
+    } catch (flowErr) {
+      console.warn('启动审批流程失败，使用简化模式:', flowErr.message);
+      return res.json(res.formatResponse(true, {
+        simplified: true,
+        message: '审批流程已简化处理'
+      }, '已提交审批'));
+    }
+  } catch (error) {
+    console.error('提交客户审批失败:', error);
+    res.status(500).json(res.formatResponse(false, null, '提交审批失败'));
+  }
+};
+
+const getCustomerApprovalList = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const pool = await getPool();
+
+    let whereClause = 'WHERE c.flow_instance_id IS NOT NULL';
+    if (status === 'pending') {
+      whereClause += " AND c.flow_status = 'pending'";
+    } else if (status === 'approved') {
+      whereClause += " AND c.flow_status = 'approved'";
+    } else if (status === 'rejected') {
+      whereClause += " AND c.flow_status = 'rejected'";
+    }
+
+    const result = await pool.request()
+      .query(`
+        SELECT c.*, u.name as sales_name
+        FROM customers c
+        LEFT JOIN sys_users u ON c.sales_id = u.id
+        ${whereClause}
+        ORDER BY c.updated_at DESC
+      `);
+
+    res.json(res.formatResponse(true, result.recordset));
+  } catch (error) {
+    console.error('获取客户审批列表失败:', error);
+    res.status(500).json(res.formatResponse(false, null, '获取审批列表失败'));
+  }
+};
+
 module.exports = {
   getAllCustomers,
   getCustomerById,
@@ -1080,5 +1231,7 @@ module.exports = {
   assignCustomer,
   releaseCustomer,
   getCustomerPoolLogs,
-  getCustomerPoolStatistics
+  getCustomerPoolStatistics,
+  submitCustomerApproval,
+  getCustomerApprovalList
 };

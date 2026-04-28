@@ -170,7 +170,13 @@
           <i class="fa fa-sync w-6"></i>
           <span>ERP对接</span>
         </router-link>
-        
+
+        <!-- 测试管理模块 -->
+        <router-link v-if="hasPermission('admin')" to="/test-management" class="nav-item" active-class="active">
+          <i class="fa fa-vial w-6"></i>
+          <span>测试管理</span>
+        </router-link>
+
         <!-- 文件管理模块 -->
         <div v-if="hasPermission('document')" class="nav-item" @click="toggleMenu('file')">
           <i class="fa fa-folder w-6"></i>

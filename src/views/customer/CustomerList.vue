@@ -58,6 +58,14 @@
         <el-option label="正式客户" value="formal"></el-option>
         <el-option label="意向客户" value="intentional"></el-option>
       </el-select>
+      <el-select v-model="filters.enterpriseCategory" placeholder="企业类别" clearable @change="loadCustomers">
+        <el-option label="设备厂商" value="equipment_vendor"></el-option>
+        <el-option label="集成商" value="integrator"></el-option>
+        <el-option label="终端客户" value="end_customer"></el-option>
+        <el-option label="代理商" value="agent"></el-option>
+        <el-option label="外协厂" value="subcontractor"></el-option>
+        <el-option label="贸易商" value="trader"></el-option>
+      </el-select>
       <el-select v-model="filters.customerPoolType" placeholder="客户池" clearable @change="loadCustomers">
         <el-option label="公海客户" value="public"></el-option>
         <el-option label="私海客户" value="private"></el-option>
@@ -72,6 +80,13 @@
         <el-option label="重点" value="important"></el-option>
         <el-option label="普通" value="normal"></el-option>
         <el-option label="低价值" value="low"></el-option>
+      </el-select>
+      <el-select v-model="filters.cooperationLevel" placeholder="合作等级" clearable @change="loadCustomers">
+        <el-option label="战略合作" value="strategic"></el-option>
+        <el-option label="优先供应商" value="preferred"></el-option>
+        <el-option label="合格供应商" value="qualified"></el-option>
+        <el-option label="备选供应商" value="alternative"></el-option>
+        <el-option label="新开发" value="new"></el-option>
       </el-select>
       <el-select v-model="filters.salesId" placeholder="跟进销售" clearable @change="loadCustomers">
         <el-option v-for="user in salesUsers" :key="user.id" :label="user.name" :value="user.id"></el-option>
@@ -90,6 +105,35 @@
       <el-table-column prop="industry" label="所属行业" width="120">
         <template #default="scope">
           <span>{{ getIndustryText(scope.row.industry) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="enterprise_category" label="企业类别" width="100">
+        <template #default="scope">
+          <el-tag size="small" :type="getEnterpriseCategoryTag(scope.row.enterprise_category)">
+            {{ getEnterpriseCategoryText(scope.row.enterprise_category) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="equipment_type" label="设备类型" width="100">
+        <template #default="scope">
+          <span>{{ getEquipmentTypeText(scope.row.equipment_type) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="annual_purchase_amount" label="年采购量(万)" width="110">
+        <template #default="scope">
+          <span>{{ scope.row.annual_purchase_amount || '-' }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="cooperation_level" label="合作等级" width="90">
+        <template #default="scope">
+          <el-tag size="small" :type="getCooperationLevelTag(scope.row.cooperation_level)">
+            {{ getCooperationLevelText(scope.row.cooperation_level) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="region" label="区域" width="100">
+        <template #default="scope">
+          <span>{{ scope.row.region || '-' }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="customer_type" label="类型" width="100">
@@ -247,9 +291,11 @@ export default {
       filters: {
         keyword: '',
         customerType: '',
+        enterpriseCategory: '',
         customerPoolType: '',
         status: '',
         level: '',
+        cooperationLevel: '',
         salesId: ''
       },
       currentPage: 1,
@@ -480,15 +526,72 @@ export default {
     },
     getIndustryText(industry) {
       const map = {
-        '3c': '3C',
+        '3c': '3C电子',
         'photovoltaic': '光伏',
         'new_energy': '新能源',
-        'auto_parts': '汽配',
-        'medical': '医疗',
-        'food': '食品',
+        'auto_parts': '汽车零部件',
+        'medical': '医疗设备',
+        'food': '食品饮料',
+        'engineering': '工程机械',
+        'aerospace': '航空航天',
+        'railway': '轨道交通',
+        'semiconductor': '半导体',
         'other': '其他'
       }
       return map[industry] || industry
+    },
+    getEnterpriseCategoryText(category) {
+      const map = {
+        'equipment_vendor': '设备厂商',
+        'integrator': '集成商',
+        'end_customer': '终端客户',
+        'agent': '代理商',
+        'subcontractor': '外协厂',
+        'trader': '贸易商'
+      }
+      return map[category] || category
+    },
+    getEnterpriseCategoryTag(category) {
+      const map = {
+        'equipment_vendor': 'primary',
+        'integrator': 'success',
+        'end_customer': 'warning',
+        'agent': 'info',
+        'subcontractor': 'danger',
+        'trader': ''
+      }
+      return map[category] || 'info'
+    },
+    getEquipmentTypeText(type) {
+      const map = {
+        'custom_automation': '非标自动化',
+        'standard_equipment': '标准设备',
+        'fixture': '工装夹具',
+        'testing': '检测设备',
+        'robot': '机器人',
+        'production_line': '生产线'
+      }
+      return map[type] || type || '-'
+    },
+    getCooperationLevelText(level) {
+      const map = {
+        'strategic': '战略合作',
+        'preferred': '优先供应商',
+        'qualified': '合格供应商',
+        'alternative': '备选供应商',
+        'new': '新开发'
+      }
+      return map[level] || level
+    },
+    getCooperationLevelTag(level) {
+      const map = {
+        'strategic': 'danger',
+        'preferred': 'warning',
+        'qualified': 'success',
+        'alternative': 'info',
+        'new': ''
+      }
+      return map[level] || 'info'
     },
     getTagText(tag) {
       const map = {

@@ -299,8 +299,8 @@
         </el-form-item>
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="userForm.gender">
-            <el-radio :value="'male'">男</el-radio>
-            <el-radio :value="'female'">女</el-radio>
+            <el-radio value="male">男</el-radio>
+            <el-radio value="female">女</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="职位" prop="position" required>
@@ -1633,59 +1633,6 @@ export default {
     // 保存用户
     async saveUser() {
       try {
-        // 查重校验
-        const employeeNo = this.userForm.employeeNo ? String(this.userForm.employeeNo).trim() : ''
-        const name = this.userForm.name ? this.userForm.name.trim() : ''
-        
-        if (this.isEdit) {
-          // 编辑用户时的查重逻辑
-          // 查找原始用户数据
-          const originalUser = this.users.find(u => u.id === this.userForm.id)
-          
-          // 只有在修改了工号时才检查工号重复
-          if (employeeNo !== (String(originalUser.employee_no) || String(originalUser.employeeNo) || '')) {
-            const existingByEmployeeNo = this.users.find(u => 
-              u.id !== this.userForm.id && 
-              (String(u.employee_no) === employeeNo || String(u.employeeNo) === employeeNo)
-            )
-            if (existingByEmployeeNo) {
-              this.$message.error(`工号 ${employeeNo} 已存在（用户：${existingByEmployeeNo.name}），请修改后重试`)
-              return
-            }
-          }
-          
-          // 只有在修改了姓名时才检查姓名重复
-          if (name !== originalUser.name) {
-            const existingByName = this.users.find(u => 
-              u.id !== this.userForm.id && 
-              u.name === name
-            )
-            if (existingByName) {
-              this.$message.error(`姓名 ${name} 在公司已存在（部门：${this.getDepartmentName(existingByName)}），请修改后重试`)
-              return
-            }
-          }
-        } else {
-          // 新增用户时的查重逻辑
-          // 检查工号是否重复
-          const existingByEmployeeNo = this.users.find(u => 
-            (String(u.employee_no) === employeeNo || String(u.employeeNo) === employeeNo)
-          )
-          if (existingByEmployeeNo) {
-            this.$message.error(`工号 ${employeeNo} 已存在（用户：${existingByEmployeeNo.name}），请修改后重试`)
-            return
-          }
-          
-          // 检查姓名是否重复（全公司范围）
-          const existingByName = this.users.find(u => 
-            u.name === name
-          )
-          if (existingByName) {
-            this.$message.error(`姓名 ${name} 在公司已存在（部门：${this.getDepartmentName(existingByName)}），请修改后重试`)
-            return
-          }
-        }
-        
         const url = this.isEdit
           ? `${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users/${this.userForm.id}`
           : `${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users`
@@ -1694,17 +1641,17 @@ export default {
 
         const body = {
           name: this.userForm.name,
-          gender: this.userForm.gender,
-          position: this.userForm.position,
+          gender: this.userForm.gender || 'male',
+          position: this.userForm.position || '',
           employee_no: this.userForm.employeeNo,
-          email: this.userForm.email,
-          join_date: this.userForm.joinDate,
+          email: this.userForm.email || '',
+          join_date: this.userForm.joinDate || null,
           department_id: this.userForm.department_id,
-          team_id: this.userForm.team_id,
-          permissions: this.userForm.permissions
+          team_id: this.userForm.team_id || null,
+          permissions: this.userForm.permissions || {}
         }
 
-        if (!this.isEdit) {
+        if (!this.isEdit && this.userForm.password) {
           body.password = this.userForm.password
         }
 
@@ -1723,6 +1670,12 @@ export default {
           this.showAddDialog = false
           await this.fetchUsers()
           await this.fetchOrganizationData()
+          if (this.isEdit && this.selectedNode && this.selectedNode.type === 'user') {
+            const updatedUser = this.users.find(u => u.id === this.userForm.id)
+            if (updatedUser) {
+              this.selectedNode = { ...updatedUser, type: 'user' }
+            }
+          }
         } else {
           this.$message.error(result.message || '操作失败')
         }
@@ -1740,20 +1693,19 @@ export default {
         type: 'warning'
       }).then(async () => {
         try {
-          // 构建完整的用户数据，与saveUser方法保持一致
           const userData = {
-            name: user.name,
-            gender: user.gender,
-            position: user.position,
-            employee_no: user.employee_no || user.employeeNo,
-            email: user.email,
-            join_date: user.join_date || user.joinDate,
-            department_id: user.department_id || user.departmentId,
-            team_id: user.team_id || user.teamId,
+            name: user?.name || '',
+            gender: user?.gender || 'male',
+            position: user?.position || '',
+            employee_no: user?.employee_no || user?.employeeNo || '',
+            email: user?.email || '',
+            join_date: user?.join_date || user?.joinDate || '',
+            department_id: user?.department_id || user?.departmentId || null,
+            team_id: user?.team_id || user?.teamId || null,
             status: 'resigned'
           }
 
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users/${user.id}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users/${user?.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -1785,20 +1737,19 @@ export default {
         type: 'primary'
       }).then(async () => {
         try {
-          // 构建完整的用户数据，与saveUser方法保持一致
           const userData = {
-            name: user.name,
-            gender: user.gender,
-            position: user.position,
-            employee_no: user.employee_no || user.employeeNo,
-            email: user.email,
-            join_date: user.join_date || user.joinDate,
-            department_id: user.department_id || user.departmentId,
-            team_id: user.team_id || user.teamId,
+            name: user?.name || '',
+            gender: user?.gender || 'male',
+            position: user?.position || '',
+            employee_no: user?.employee_no || user?.employeeNo || '',
+            email: user?.email || '',
+            join_date: user?.join_date || user?.joinDate || '',
+            department_id: user?.department_id || user?.departmentId || null,
+            team_id: user?.team_id || user?.teamId || null,
             status: 'active'
           }
 
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users/${user.id}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005/api'}/auth/users/${user?.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',

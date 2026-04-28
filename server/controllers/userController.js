@@ -4,19 +4,30 @@ const bcrypt = require('bcrypt');
 const { getPool } = require('../config/database');
 const AuditLog = require('../middleware/auditLog');
 const eventBus = require('../services/eventBus');
-const { BUSINESS_TYPES, EVENT_ACTIONS, eventDefinitions } = require('../services/eventSchema');
+const { eventDefinitions } = require('../services/eventSchema');
 
 const router = express.Router();
 
+const BUSINESS_TYPES = {
+  EMPLOYEE: 'EMPLOYEE',
+  CUSTOMER: 'CUSTOMER',
+  SUPPLIER: 'SUPPLIER',
+  MATERIAL: 'MATERIAL'
+};
+
 const publishEmployeeEvent = (action, entityData, operator) => {
-  const eventName = eventDefinitions.employee[action];
-  if (eventName) {
-    eventBus.publish(eventName, {
-      businessType: BUSINESS_TYPES.EMPLOYEE,
-      action,
-      entityData,
-      operator
-    });
+  try {
+    const eventName = eventDefinitions.employee?.[action];
+    if (eventName && eventBus) {
+      eventBus.publish(eventName, {
+        businessType: BUSINESS_TYPES.EMPLOYEE,
+        action,
+        entityData,
+        operator
+      });
+    }
+  } catch (err) {
+    console.warn('事件发布失败:', err.message);
   }
 };
 
@@ -203,81 +214,123 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     let { id } = req.params;
-    const {
-      employee_no, name, role, department_id, team_id, position, position_id, phone, email,
-      permissions, data_permission, gender, join_date
+    let {
+      employee_no, name, role, department_id, team_id, position, phone, email,
+      permissions, gender, join_date
     } = req.body;
 
-    // 处理带前缀的 ID（如 user_238）
-    if (typeof id === 'string' && id.startsWith('user_')) {
-      id = parseInt(id.replace('user_', ''));
+    if (!id) {
+      return res.status(400).json({ success: false, message: '用户ID不能为空' });
     }
 
-    console.log('更新用户 - ID:', id, 'team_id:', team_id, 'position_id:', position_id, '类型:', typeof team_id);
-    console.log('请求体:', JSON.stringify(req.body, null, 2));
+    if (!name || String(name).trim() === '') {
+      return res.status(400).json({ success: false, message: '用户姓名不能为空' });
+    }
+
+    if (!department_id) {
+      return res.status(400).json({ success: false, message: '所属部门不能为空' });
+    }
+
+    if (typeof id === 'string' && id.startsWith('user_')) {
+      id = id.replace('user_', '');
+    }
+
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ success: false, message: '无效的用户ID' });
+    }
 
     const pool = await getPool();
-    
-    // 自动同步职位
-    let finalPositionId = position_id;
-    if (position && !position_id) {
-      finalPositionId = await autoSyncPosition(pool, position, department_id);
+
+    const checkResult = await pool.request()
+      .input('id', sql.Int, parsedId)
+      .query('SELECT id FROM sys_users WHERE id = @id');
+
+    if (checkResult.recordset.length === 0) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
     }
-    
-    const permissionsStr = permissions ? JSON.stringify(permissions) : null;
-    const dataPermissionStr = data_permission ? JSON.stringify(data_permission) : null;
 
-    await pool.request()
-      .input('id', sql.Int, id)
-      .input('employee_no', sql.Int, employee_no || null)
-      .input('name', sql.NVarChar, name)
-      .input('role', sql.NVarChar, role)
-      .input('department_id', sql.Int, department_id)
-      .input('team_id', sql.Int, team_id || null)
-      .input('position', sql.NVarChar, position)
-      .input('position_id', sql.Int, finalPositionId || null)
-      .input('phone', sql.NVarChar, phone)
-      .input('email', sql.NVarChar, email)
-      .input('permissions', sql.NVarChar, permissionsStr)
-      .input('data_permission', sql.NVarChar, dataPermissionStr)
-      .input('updated_by', sql.Int, req.user?.id)
-      .input('gender', sql.NVarChar, gender || 'male')
-      .input('join_date', sql.Date, join_date || null)
-      .query(`
-        UPDATE sys_users SET
-          employee_no = @employee_no,
-          name = @name,
-          role = @role,
-          department_id = @department_id,
-          team_id = @team_id,
-          position = @position,
-          position_id = @position_id,
-          phone = @phone,
-          email = @email,
-          permissions = @permissions,
-          data_permission = @data_permission,
-          gender = @gender,
-          join_date = @join_date,
-          updated_at = GETDATE(),
-          updated_by = @updated_by
-        WHERE id = @id
-      `);
+    let permissionsStr = null;
+    if (permissions) {
+      try {
+        if (typeof permissions === 'string') {
+          permissionsStr = permissions;
+        } else {
+          permissionsStr = JSON.stringify(permissions);
+        }
+      } catch (e) {
+        permissionsStr = null;
+      }
+    }
 
-    await AuditLog.log('UPDATE_USER', req.user?.id, { userId: id }, req);
+    const parsedDepartmentId = parseInt(department_id);
+    const parsedTeamId = team_id ? parseInt(team_id) : null;
+    const parsedUserId = req.user?.id ? parseInt(req.user.id) : null;
+    const parsedEmployeeNo = employee_no ? String(employee_no) : null;
 
-    publishEmployeeEvent('update', {
-      id,
-      employee_no,
-      name,
-      role,
-      department_id,
-      team_id,
-      position,
-      phone,
-      email,
-      gender,
-      join_date
-    }, req.user?.name || req.user?.username);
+    const request = pool.request();
+    request.input('id', sql.Int, parsedId);
+    request.input('employee_no', sql.VarChar, parsedEmployeeNo);
+    request.input('name', sql.NVarChar, String(name).trim());
+    request.input('role', sql.VarChar, role || null);
+    request.input('department_id', sql.Int, parsedDepartmentId);
+    request.input('team_id', sql.Int, parsedTeamId);
+    request.input('position', sql.NVarChar, position || null);
+    request.input('phone', sql.NVarChar, phone || null);
+    request.input('email', sql.NVarChar, email || null);
+    request.input('permissions', sql.Text, permissionsStr);
+    request.input('updated_by', sql.Int, parsedUserId);
+    request.input('gender', sql.VarChar, gender || 'male');
+
+    if (join_date) {
+      request.input('join_date', sql.Date, join_date);
+    }
+
+    let updateFields = `
+      employee_no = @employee_no,
+      name = @name,
+      role = @role,
+      department_id = @department_id,
+      team_id = @team_id,
+      position = @position,
+      phone = @phone,
+      email = @email,
+      permissions = @permissions,
+      gender = @gender,
+      updated_at = GETDATE(),
+      updated_by = @updated_by
+    `;
+
+    if (join_date) {
+      updateFields += ', join_date = @join_date';
+    }
+
+    await request.query(`UPDATE sys_users SET ${updateFields} WHERE id = @id`);
+
+    try {
+      if (parsedUserId) {
+        await AuditLog.log('UPDATE_USER', parsedUserId, { userId: parsedId }, req);
+      }
+    } catch (auditErr) {
+      console.warn('审计日志记录失败:', auditErr.message);
+    }
+
+    try {
+      publishEmployeeEvent('update', {
+        id: parsedId,
+        employee_no: parsedEmployeeNo,
+        name: String(name).trim(),
+        department_id: parsedDepartmentId,
+        team_id: parsedTeamId,
+        position,
+        phone,
+        email,
+        gender,
+        join_date
+      }, req.user?.name || req.user?.username);
+    } catch (eventErr) {
+      console.warn('事件发布失败:', eventErr.message);
+    }
 
     res.json({
       success: true,
@@ -285,7 +338,21 @@ const updateUser = async (req, res) => {
     });
   } catch (error) {
     console.error('更新用户失败:', error);
-    res.status(500).json({ success: false, message: '更新用户失败: ' + error.message });
+
+    if (error.number === 2627) {
+      return res.status(400).json({ success: false, message: '员工编号已存在，请使用其他编号' });
+    }
+    if (error.number === 547) {
+      return res.status(400).json({ success: false, message: '关联的部门或职位不存在' });
+    }
+    if (error.number === 245) {
+      return res.status(400).json({ success: false, message: '数据类型转换错误' });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '更新用户失败'
+    });
   }
 };
 

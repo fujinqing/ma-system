@@ -559,6 +559,52 @@ const deleteAsset = async (req, res) => {
   }
 };
 
+const getAllRoles = async (req, res) => {
+  try {
+    const pool = await getPool();
+
+    await pool.request().query(`
+      IF OBJECT_ID('dbo.sys_roles','U') IS NULL
+      CREATE TABLE dbo.sys_roles (
+        role_id INT IDENTITY(1,1) PRIMARY KEY,
+        role_code NVARCHAR(50) NOT NULL UNIQUE,
+        role_name NVARCHAR(100) NOT NULL,
+        role_desc NVARCHAR(500) NULL,
+        status NVARCHAR(20) DEFAULT 'active',
+        created_at DATETIME DEFAULT GETDATE(),
+        updated_at DATETIME DEFAULT GETDATE()
+      )
+    `);
+
+    const roleCount = await pool.request().query('SELECT COUNT(*) as cnt FROM dbo.sys_roles');
+    if (roleCount.recordset[0].cnt === 0) {
+      await pool.request().query(`
+        INSERT INTO dbo.sys_roles (role_code, role_name, role_desc, status)
+        VALUES
+          ('admin', '系统管理员', '拥有系统所有权限', 'active'),
+          ('supervisor', '主管', '管理部门和下属员工', 'active'),
+          ('manager', '经理', '管理特定业务模块', 'active'),
+          ('employee', '普通员工', '基本操作权限', 'active'),
+          ('finance', '财务', '财务相关权限', 'active'),
+          ('hr', '人事', '人事管理权限', 'active'),
+          ('warehouse', '仓库管理员', '仓库管理权限', 'active'),
+          ('sales', '销售', '销售管理权限', 'active')
+      `);
+    }
+
+    const result = await pool.request().query(`
+      SELECT role_id as id, role_code as code, role_name as name, role_desc as description, status, created_at, updated_at
+      FROM dbo.sys_roles
+      WHERE status = 'active'
+      ORDER BY role_id ASC
+    `);
+    res.json(res.formatResponse(true, result.recordset, '获取角色列表成功'));
+  } catch (error) {
+    console.error('获取角色列表失败:', error);
+    res.status(500).json(res.formatResponse(false, null, '获取角色列表失败'));
+  }
+};
+
 router.get('/vehicles', getAllVehicles);
 router.post('/vehicles', createVehicle);
 router.put('/vehicles/:id', updateVehicle);
@@ -575,6 +621,7 @@ router.get('/assets', getAllAssets);
 router.post('/assets', createAsset);
 router.put('/assets/:id', updateAsset);
 router.delete('/assets/:id', deleteAsset);
+router.get('/roles', getAllRoles);
 
 module.exports = {
   router,
@@ -593,5 +640,6 @@ module.exports = {
   getAllAssets,
   createAsset,
   updateAsset,
-  deleteAsset
+  deleteAsset,
+  getAllRoles
 };

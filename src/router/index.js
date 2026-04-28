@@ -329,6 +329,13 @@ const routes = [
     component: () => import('../views/erp/ERPSync.vue'),
     meta: { title: 'ERP对接' }
   },
+  // 测试管理
+  {
+    path: '/test-management',
+    name: 'TestManagement',
+    component: () => import('../views/test/TestManagement.vue'),
+    meta: { title: '测试管理', permission: 'test:management' }
+  },
   // 系统设置
   {
     path: '/setting',
@@ -352,6 +359,12 @@ const routes = [
     name: 'FlowManagement',
     component: () => import('../views/setting/FlowManagement.vue'),
     meta: { title: '流程管理' }
+  },
+  {
+    path: '/workflow/instance/:id',
+    name: 'InstanceDetail',
+    component: () => import('../views/workflow/InstanceDetail.vue'),
+    meta: { title: '流程实例详情' }
   },
   {
     path: '/setting/rates',
