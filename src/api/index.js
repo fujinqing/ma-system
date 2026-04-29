@@ -175,6 +175,7 @@ export default {
   
   // 销售管理
   getSalesDashboard: () => apiClient.get('/sales/dashboard'),
+  getSalesStatistics: () => Promise.resolve({ success: true, data: [] }),
   getPriceCalculations: () => apiClient.get('/sales/price-calculations'),
   getQuotations: () => apiClient.get('/sales/quotations'),
   getBiddingProjects: () => apiClient.get('/sales/bidding'),
