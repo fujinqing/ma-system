@@ -29,6 +29,10 @@
         </div>
         <div v-if="hasPermission('crm')" class="submenu" :class="{ 'expanded': expandedMenus.crm }">
           <router-link to="/crm" class="submenu-item" active-class="active">客户管理</router-link>
+          <router-link to="/crm/opportunities" class="submenu-item" active-class="active">商机管理</router-link>
+          <router-link to="/crm/transfer" class="submenu-item" active-class="active">客户移交</router-link>
+          <router-link to="/crm/equipment" class="submenu-item" active-class="active">设备台账</router-link>
+          <router-link to="/crm/dashboard" class="submenu-item" active-class="active">CRM数据看板</router-link>
           <router-link to="/crm/competitors" class="submenu-item" active-class="active">竞争对手管理</router-link>
           <router-link to="/crm/activities" class="submenu-item" active-class="active">内部协作</router-link>
         </div>
