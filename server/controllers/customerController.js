@@ -5,14 +5,18 @@ const eventBus = require('../services/eventBus');
 const { BUSINESS_TYPES, EVENT_ACTIONS, eventDefinitions } = require('../services/eventSchema');
 
 const publishCustomerEvent = (action, entityData, operator) => {
-  const eventName = eventDefinitions.customer[action];
-  if (eventName) {
-    eventBus.publish(eventName, {
-      businessType: BUSINESS_TYPES.CUSTOMER,
-      action,
-      entityData,
-      operator
-    });
+  try {
+    const eventName = eventDefinitions.customer[action];
+    if (eventName) {
+      eventBus.publish(eventName, {
+        businessType: BUSINESS_TYPES.CUSTOMER,
+        action,
+        entityData,
+        operator
+      });
+    }
+  } catch (eventErr) {
+    console.warn('发布客户事件失败，不影响主流程:', eventErr.message);
   }
 };
 
@@ -265,31 +269,27 @@ const createCustomer = async (req, res) => {
       console.warn('审计日志记录失败:', auditErr.message);
     }
 
-    try {
-      publishCustomerEvent('create', {
-        id: newCustomerId,
-        code: newCode,
-        name: name,
-        short_name: short_name,
-        enterprise_category,
-        level: level || 'normal',
-        customer_type: customer_type || 'potential',
-        customer_pool_type: customer_pool_type || 'public',
-        industry,
-        equipment_type,
-        annual_purchase_amount,
-        cooperation_level,
-        region,
-        main_equipment,
-        main_products,
-        company_scale,
-        cooperation_years,
-        sales_id,
-        status: 'active'
-      }, req.user?.name || req.user?.username);
-    } catch (eventErr) {
-      console.warn('发布客户创建事件失败:', eventErr.message);
-    }
+    publishCustomerEvent('create', {
+      id: newCustomerId,
+      code: newCode,
+      name: name,
+      short_name: short_name,
+      enterprise_category,
+      level: level || 'normal',
+      customer_type: customer_type || 'potential',
+      customer_pool_type: customer_pool_type || 'public',
+      industry,
+      equipment_type,
+      annual_purchase_amount,
+      cooperation_level,
+      region,
+      main_equipment,
+      main_products,
+      company_scale,
+      cooperation_years,
+      sales_id,
+      status: 'active'
+    }, req.user?.name || req.user?.username);
 
     res.json(res.formatResponse(true, { id: newCustomerId, code: newCode }, '客户创建成功'));
   } catch (error) {
@@ -440,12 +440,8 @@ const updateCustomer = async (req, res) => {
       console.warn('审计日志记录失败:', auditErr.message);
     }
 
-    try {
-      if (updatedData) {
-        publishCustomerEvent('update', updatedData, req.user?.name || req.user?.username);
-      }
-    } catch (eventErr) {
-      console.warn('发布更新事件失败:', eventErr.message);
+    if (updatedData) {
+      publishCustomerEvent('update', updatedData, req.user?.name || req.user?.username);
     }
 
     res.json(res.formatResponse(true, updatedData, '客户更新成功'));
@@ -504,11 +500,7 @@ const deleteCustomer = async (req, res) => {
 
       await AuditLog.log('DELETE_CUSTOMER', req.user?.id, { customerId: id }, req);
 
-      try {
-        publishCustomerEvent('delete', { id: parseInt(id) }, req.user?.name || req.user?.username);
-      } catch (eventErr) {
-        console.warn('发布删除事件失败，不影响主流程:', eventErr.message);
-      }
+      publishCustomerEvent('delete', { id: parseInt(id) }, req.user?.name || req.user?.username);
 
       res.json(res.formatResponse(true, { id: parseInt(id) }, '客户删除成功'));
     } catch (error) {
