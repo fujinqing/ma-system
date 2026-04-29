@@ -382,7 +382,6 @@ export default {
           this.$message.error(response?.message || '获取客户数据失败')
         }
       } catch (error) {
-        console.error('获取客户数据异常:', error)
         this.$message.error('获取客户数据失败')
       } finally {
         this.loading = false
@@ -391,21 +390,21 @@ export default {
     async loadStatistics() {
       try {
         const response = await api.getCustomerStatistics()
-        if (response.success) {
+        if (response && response.success) {
           this.statistics = response.data
         }
       } catch (error) {
-        console.error('获取统计数据失败:', error)
+        console.warn('获取统计数据失败:', error)
       }
     },
     async loadSalesUsers() {
       try {
         const response = await api.getSalesUsers()
-        if (response.success) {
+        if (response && response.success) {
           this.salesUsers = response.data
         }
       } catch (error) {
-        console.error('获取销售用户失败:', error)
+        console.warn('获取销售用户失败:', error)
       }
     },
     handleSearch() {
