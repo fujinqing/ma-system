@@ -439,10 +439,12 @@ export default {
             } else {
               response = await api.createCustomer(this.customerForm)
             }
-            
-            if (response.success) {
+
+            if (response && response.success) {
               this.$message.success(this.isEdit ? '更新成功' : '保存成功')
               this.$router.push('/crm')
+            } else {
+              this.$message.error(response?.message || (this.isEdit ? '更新失败' : '保存失败'))
             }
           } catch (error) {
             console.error('提交表单失败:', error)

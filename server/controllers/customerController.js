@@ -404,59 +404,75 @@ const updateCustomer = async (req, res) => {
 const deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json(res.formatResponse(false, null, '无效的客户ID'));
+    }
+
     const pool = await getPool();
-    
-    // 开始事务
-    const transaction = pool.transaction();
-    await transaction.begin();
-    
+
+    let transaction;
     try {
-      // 检查客户是否存在
+      transaction = pool.transaction();
+      await transaction.begin();
+    } catch (txErr) {
+      console.error('创建事务失败:', txErr);
+      return res.status(500).json(res.formatResponse(false, null, '数据库事务初始化失败'));
+    }
+
+    try {
       const checkResult = await transaction.request()
         .input('id', sql.Int, id)
         .query('SELECT id FROM customers WHERE id = @id');
-      
+
       if (checkResult.recordset.length === 0) {
         await transaction.rollback();
         return res.status(404).json(res.formatResponse(false, null, '客户不存在'));
       }
-      
-      // 1. 删除客户联系表数据
+
       await transaction.request()
         .input('customerId', sql.Int, id)
         .query('DELETE FROM customer_contacts WHERE customer_id = @customerId');
-      
-      // 2. 删除客户活动表数据
+
       await transaction.request()
         .input('customerId', sql.Int, id)
         .query('DELETE FROM customer_activities WHERE customer_id = @customerId');
-      
-      // 3. 删除客户文件表数据
+
       await transaction.request()
         .input('customerId', sql.Int, id)
         .query('DELETE FROM customer_documents WHERE customer_id = @customerId');
-      
-      // 4. 删除客户表数据
+
       await transaction.request()
         .input('id', sql.Int, id)
         .query('DELETE FROM customers WHERE id = @id');
-      
-      // 提交事务
+
       await transaction.commit();
-      
+
       await AuditLog.log('DELETE_CUSTOMER', req.user?.id, { customerId: id }, req);
 
-      publishCustomerEvent('delete', { id: parseInt(id) }, req.user?.name || req.user?.username);
+      try {
+        publishCustomerEvent('delete', { id: parseInt(id) }, req.user?.name || req.user?.username);
+      } catch (eventErr) {
+        console.warn('发布删除事件失败，不影响主流程:', eventErr.message);
+      }
 
-      res.json(res.formatResponse(true, null, '客户删除成功'));
+      res.json(res.formatResponse(true, { id: parseInt(id) }, '客户删除成功'));
     } catch (error) {
-      // 回滚事务
-      await transaction.rollback();
-      console.error('删除客户失败:', error);
-      res.status(500).json(res.formatResponse(false, null, '删除客户失败'));
+      try {
+        await transaction.rollback();
+      } catch (rollbackErr) {
+        console.error('回滚失败:', rollbackErr);
+      }
+      console.error('删除客户业务错误:', error);
+
+      if (error.number === 547) {
+        return res.status(400).json(res.formatResponse(false, null, '该客户存在关联数据，无法删除'));
+      }
+
+      res.status(500).json(res.formatResponse(false, null, '删除客户失败: ' + error.message));
     }
   } catch (error) {
-    console.error('删除客户失败:', error);
+    console.error('删除客户系统错误:', error);
     res.status(500).json(res.formatResponse(false, null, '删除客户失败'));
   }
 };

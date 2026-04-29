@@ -438,14 +438,15 @@ export default {
           type: 'warning'
         })
         const response = await api.deleteCustomer(id)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('删除成功')
           this.loadCustomers()
           this.loadStatistics()
+        } else {
+          this.$message.error(response?.message || '删除失败')
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除客户失败:', error)
           this.$message.error('删除客户失败')
         }
       }
@@ -472,13 +473,14 @@ export default {
       }
       try {
         const response = await api.addCustomerActivity(this.currentCustomerId, this.activityForm)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('跟进记录添加成功')
           this.activityDialogVisible = false
           this.loadCustomers()
+        } else {
+          this.$message.error(response?.message || '添加跟进记录失败')
         }
       } catch (error) {
-        console.error('添加跟进记录失败:', error)
         this.$message.error('添加跟进记录失败')
       }
     },
@@ -653,18 +655,17 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        
+
         const response = await api.claimCustomer(customer.id)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('客户领取成功')
           this.loadCustomers()
           this.loadStatistics()
         } else {
-          this.$message.error(response.message || '领取失败')
+          this.$message.error(response?.message || '领取失败')
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('领取客户失败:', error)
           this.$message.error('领取客户失败')
         }
       }
@@ -677,18 +678,17 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        
+
         const response = await api.releaseCustomer(customer.id)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('客户已释放到公海')
           this.loadCustomers()
           this.loadStatistics()
         } else {
-          this.$message.error(response.message || '释放失败')
+          this.$message.error(response?.message || '释放失败')
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('释放客户失败:', error)
           this.$message.error('释放客户失败')
         }
       }
@@ -708,23 +708,21 @@ export default {
         this.$message.warning('请选择要分配的销售员')
         return
       }
-      
       try {
         const response = await api.assignCustomer(this.assignForm.customerId, {
           sales_id: this.assignForm.salesId,
           remarks: this.assignForm.remarks
         })
-        
-        if (response.success) {
+
+        if (response && response.success) {
           this.$message.success('客户分配成功')
           this.assignDialogVisible = false
           this.loadCustomers()
           this.loadStatistics()
         } else {
-          this.$message.error(response.message || '分配失败')
+          this.$message.error(response?.message || '分配失败')
         }
       } catch (error) {
-        console.error('分配客户失败:', error)
         this.$message.error('分配客户失败')
       }
     }
