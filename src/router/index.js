@@ -90,6 +90,24 @@ const routes = [
     component: () => import('../views/customer/ContractManagement.vue'),
     meta: { title: '合同管理' }
   },
+  {
+    path: '/crm/contracts/add',
+    name: 'AddContract',
+    component: () => import('../views/customer/ContractForm.vue'),
+    meta: { title: '新增合同' }
+  },
+  {
+    path: '/crm/contracts/edit/:id',
+    name: 'EditContract',
+    component: () => import('../views/customer/ContractForm.vue'),
+    meta: { title: '编辑合同' }
+  },
+  {
+    path: '/crm/contracts/detail/:id',
+    name: 'ContractDetail',
+    component: () => import('../views/customer/ContractDetail.vue'),
+    meta: { title: '合同详情' }
+  },
   // 销售管理
   {
     path: '/sales',
