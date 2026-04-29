@@ -1274,6 +1274,244 @@ const getCustomerApprovalList = async (req, res) => {
   }
 };
 
+const transferCustomer = async (req, res) => {
+  try {
+    const { customer_id, to_user_id, transfer_reason, transfer_remark } = req.body;
+
+    if (!customer_id || !to_user_id) {
+      return res.status(400).json(res.formatResponse(false, null, '客户ID和接收人不能为空'));
+    }
+
+    const pool = await getPool();
+
+    const customerResult = await pool.request()
+      .input('customer_id', sql.Int, customer_id)
+      .query('SELECT sales_id FROM customers WHERE id = @customer_id');
+
+    if (customerResult.recordset.length === 0) {
+      return res.status(404).json(res.formatResponse(false, null, '客户不存在'));
+    }
+
+    const fromUserId = customerResult.recordset[0].sales_id;
+
+    const userCheck = await pool.request()
+      .input('user_id', sql.Int, to_user_id)
+      .query('SELECT id FROM sys_users WHERE id = @user_id');
+
+    if (userCheck.recordset.length === 0) {
+      return res.status(400).json(res.formatResponse(false, null, '接收人不存在'));
+    }
+
+    let transaction;
+    try {
+      transaction = pool.transaction();
+      await transaction.begin();
+    } catch (txErr) {
+      console.error('创建事务失败:', txErr);
+      return res.status(500).json(res.formatResponse(false, null, '事务初始化失败'));
+    }
+
+    try {
+      await transaction.request()
+        .input('customer_id', sql.Int, customer_id)
+        .input('sales_id', sql.Int, to_user_id)
+        .query('UPDATE customers SET sales_id = @sales_id, updated_at = GETDATE() WHERE id = @customer_id');
+
+      await transaction.request()
+        .input('customer_id', sql.Int, customer_id)
+        .input('from_user_id', sql.Int, fromUserId || null)
+        .input('to_user_id', sql.Int, to_user_id)
+        .input('transfer_type', sql.NVarChar, 'manual')
+        .input('transfer_reason', sql.NVarChar, transfer_reason || null)
+        .input('transfer_remark', sql.NVarChar, transfer_remark || null)
+        .input('created_by', sql.Int, req.user?.id || null)
+        .query(`
+          INSERT INTO customer_transfer_logs (customer_id, from_user_id, to_user_id, transfer_type, transfer_reason, transfer_remark, created_by)
+          VALUES (@customer_id, @from_user_id, @to_user_id, @transfer_type, @transfer_reason, @transfer_remark, @created_by)
+        `);
+
+      await transaction.commit();
+
+      try {
+        await AuditLog.log('TRANSFER_CUSTOMER', req.user?.id, { customerId: customer_id, fromUserId, toUserId: to_user_id }, req);
+      } catch (auditErr) {
+        console.warn('审计日志记录失败:', auditErr.message);
+      }
+
+      res.json(res.formatResponse(true, { customer_id, from_user_id: fromUserId, to_user_id }, '客户移交成功'));
+    } catch (error) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackErr) {
+        console.error('回滚失败:', rollbackErr);
+      }
+      console.error('客户移交业务错误:', error);
+      res.status(500).json(res.formatResponse(false, null, '客户移交失败'));
+    }
+  } catch (error) {
+    console.error('客户移交系统错误:', error);
+    res.status(500).json(res.formatResponse(false, null, '客户移交失败'));
+  }
+};
+
+const batchTransferCustomers = async (req, res) => {
+  try {
+    const { customer_ids, to_user_id, transfer_reason, transfer_remark } = req.body;
+
+    if (!customer_ids || !Array.isArray(customer_ids) || customer_ids.length === 0) {
+      return res.status(400).json(res.formatResponse(false, null, '请选择要移交的客户'));
+    }
+
+    if (!to_user_id) {
+      return res.status(400).json(res.formatResponse(false, null, '接收人不能为空'));
+    }
+
+    const pool = await getPool();
+
+    const userCheck = await pool.request()
+      .input('user_id', sql.Int, to_user_id)
+      .query('SELECT id FROM sys_users WHERE id = @user_id');
+
+    if (userCheck.recordset.length === 0) {
+      return res.status(400).json(res.formatResponse(false, null, '接收人不存在'));
+    }
+
+    let transaction;
+    try {
+      transaction = pool.transaction();
+      await transaction.begin();
+    } catch (txErr) {
+      console.error('创建事务失败:', txErr);
+      return res.status(500).json(res.formatResponse(false, null, '事务初始化失败'));
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+    const results = [];
+
+    try {
+      for (const customerId of customer_ids) {
+        try {
+          const customerResult = await transaction.request()
+            .input('customer_id', sql.Int, customerId)
+            .query('SELECT sales_id FROM customers WHERE id = @customer_id');
+
+          if (customerResult.recordset.length === 0) {
+            results.push({ customer_id: customerId, success: false, message: '客户不存在' });
+            failCount++;
+            continue;
+          }
+
+          const fromUserId = customerResult.recordset[0].sales_id;
+
+          await transaction.request()
+            .input('customer_id', sql.Int, customerId)
+            .input('sales_id', sql.Int, to_user_id)
+            .query('UPDATE customers SET sales_id = @sales_id, updated_at = GETDATE() WHERE id = @customer_id');
+
+          await transaction.request()
+            .input('customer_id', sql.Int, customerId)
+            .input('from_user_id', sql.Int, fromUserId || null)
+            .input('to_user_id', sql.Int, to_user_id)
+            .input('transfer_type', sql.NVarChar, 'manual')
+            .input('transfer_reason', sql.NVarChar, transfer_reason || null)
+            .input('transfer_remark', sql.NVarChar, transfer_remark || null)
+            .input('created_by', sql.Int, req.user?.id || null)
+            .query(`
+              INSERT INTO customer_transfer_logs (customer_id, from_user_id, to_user_id, transfer_type, transfer_reason, transfer_remark, created_by)
+              VALUES (@customer_id, @from_user_id, @to_user_id, @transfer_type, @transfer_reason, @transfer_remark, @created_by)
+            `);
+
+          results.push({ customer_id: customerId, success: true });
+          successCount++;
+        } catch (itemErr) {
+          results.push({ customer_id: customerId, success: false, message: itemErr.message });
+          failCount++;
+        }
+      }
+
+      await transaction.commit();
+
+      try {
+        await AuditLog.log('BATCH_TRANSFER_CUSTOMERS', req.user?.id, { count: customer_ids.length, toUserId: to_user_id }, req);
+      } catch (auditErr) {
+        console.warn('审计日志记录失败:', auditErr.message);
+      }
+
+      res.json(res.formatResponse(true, { successCount, failCount, results }, `批量移交完成：成功${successCount}个，失败${failCount}个`));
+    } catch (error) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackErr) {
+        console.error('回滚失败:', rollbackErr);
+      }
+      console.error('批量客户移交错误:', error);
+      res.status(500).json(res.formatResponse(false, null, '批量移交失败'));
+    }
+  } catch (error) {
+    console.error('批量客户移交系统错误:', error);
+    res.status(500).json(res.formatResponse(false, null, '批量移交失败'));
+  }
+};
+
+const getTransferLogs = async (req, res) => {
+  try {
+    const { customer_id, page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+    const pool = await getPool();
+
+    let whereClause = 'WHERE 1=1';
+    const params = [];
+
+    if (customer_id) {
+      whereClause += ' AND t.customer_id = @customer_id';
+      params.push({ name: 'customer_id', value: customer_id });
+    }
+
+    const countRequest = pool.request();
+    params.forEach(p => countRequest.input(p.name, p.value));
+
+    const countResult = await countRequest.query(`
+      SELECT COUNT(*) as total FROM customer_transfer_logs t
+      ${whereClause}
+    `);
+
+    const dataRequest = pool.request();
+    params.forEach(p => dataRequest.input(p.name, p.value));
+    dataRequest.input('offset', sql.Int, offset);
+    dataRequest.input('limit', sql.Int, parseInt(limit));
+
+    const result = await dataRequest.query(`
+      SELECT t.*,
+             c.name as customer_name, c.code as customer_code,
+             fu.name as from_user_name,
+             tu.name as to_user_name,
+             u.name as created_by_name
+      FROM customer_transfer_logs t
+      LEFT JOIN customers c ON t.customer_id = c.id
+      LEFT JOIN sys_users fu ON t.from_user_id = fu.id
+      LEFT JOIN sys_users tu ON t.to_user_id = tu.id
+      LEFT JOIN sys_users u ON t.created_by = u.id
+      ${whereClause}
+      ORDER BY t.created_at DESC
+      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+    `);
+
+    res.json(res.formatResponse(true, {
+      logs: result.recordset,
+      pagination: {
+        total: countResult.recordset[0].total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(countResult.recordset[0].total / limit)
+      }
+    }));
+  } catch (error) {
+    console.error('获取移交日志失败:', error);
+    res.status(500).json(res.formatResponse(false, null, '获取移交日志失败'));
+  }
+};
+
 module.exports = {
   getAllCustomers,
   getCustomerById,
@@ -1295,5 +1533,8 @@ module.exports = {
   getCustomerPoolLogs,
   getCustomerPoolStatistics,
   submitCustomerApproval,
-  getCustomerApprovalList
+  getCustomerApprovalList,
+  transferCustomer,
+  batchTransferCustomers,
+  getTransferLogs
 };

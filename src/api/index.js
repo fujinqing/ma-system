@@ -127,6 +127,9 @@ export default {
   assignCustomer: (customerId, assignData) => apiClient.post(`/customers/${customerId}/assign`, assignData),
   getCustomerPoolLogs: (customerId, params) => apiClient.get(`/customers/${customerId}/pool-logs`, { params }),
   getCustomerPoolStatistics: () => apiClient.get('/customers/pool/statistics'),
+  transferCustomer: (transferData) => apiClient.post('/customers/transfer', transferData),
+  batchTransferCustomers: (transferData) => apiClient.post('/customers/transfer/batch', transferData),
+  getTransferLogs: (params) => apiClient.get('/customers/transfer/logs', { params }),
 
   // 竞争对手
   getCompetitors: (params) => apiClient.get('/competitors', { params }),
@@ -134,6 +137,27 @@ export default {
   createCompetitor: (competitorData) => apiClient.post('/competitors', competitorData),
   updateCompetitor: (id, competitorData) => apiClient.put(`/competitors/${id}`, competitorData),
   deleteCompetitor: (id) => apiClient.delete(`/competitors/${id}`),
+
+  // 商机管理
+  getOpportunities: (params) => apiClient.get('/opportunities', { params }),
+  getOpportunity: (id) => apiClient.get(`/opportunities/${id}`),
+  createOpportunity: (opportunityData) => apiClient.post('/opportunities', opportunityData),
+  updateOpportunity: (id, opportunityData) => apiClient.put(`/opportunities/${id}`, opportunityData),
+  deleteOpportunity: (id) => apiClient.delete(`/opportunities/${id}`),
+  changeOpportunityStage: (id, stageData) => apiClient.post(`/opportunities/${id}/change-stage`, stageData),
+  getOpportunityStatistics: () => apiClient.get('/opportunities/stats/summary'),
+
+  // 设备管理
+  getEquipmentList: (params) => apiClient.get('/crm/equipment', { params }),
+  getEquipment: (id) => apiClient.get(`/crm/equipment/${id}`),
+  createEquipment: (data) => apiClient.post('/crm/equipment', data),
+  updateEquipment: (id, data) => apiClient.put(`/crm/equipment/${id}`, data),
+  deleteEquipment: (id) => apiClient.delete(`/crm/equipment/${id}`),
+  getEquipmentStatistics: () => apiClient.get('/crm/equipment/stats'),
+  getEquipmentMaintenanceRecords: (equipmentId) => apiClient.get(`/crm/equipment/${equipmentId}/maintenance-records`),
+  createMaintenanceRecord: (equipmentId, data) => apiClient.post(`/crm/equipment/${equipmentId}/maintenance-records`, data),
+  getRepairRequests: (params) => apiClient.get('/crm/repairs', { params }),
+  createRepairRequest: (data) => apiClient.post('/crm/repairs', data),
 
   // 仪表盘统计
   getDashboardStats: () => apiClient.get('/dashboard/stats'),

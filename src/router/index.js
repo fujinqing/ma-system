@@ -42,6 +42,48 @@ const routes = [
     component: () => import('../views/customer/CustomerDetail.vue'),
     meta: { title: '客户详情' }
   },
+  {
+    path: '/crm/opportunities',
+    name: 'Opportunities',
+    component: () => import('../views/customer/OpportunityList.vue'),
+    meta: { title: '商机管理' }
+  },
+  {
+    path: '/crm/opportunities/add',
+    name: 'AddOpportunity',
+    component: () => import('../views/customer/OpportunityForm.vue'),
+    meta: { title: '新建商机' }
+  },
+  {
+    path: '/crm/opportunities/edit/:id',
+    name: 'EditOpportunity',
+    component: () => import('../views/customer/OpportunityForm.vue'),
+    meta: { title: '编辑商机' }
+  },
+  {
+    path: '/crm/opportunities/detail/:id',
+    name: 'OpportunityDetail',
+    component: () => import('../views/customer/OpportunityDetail.vue'),
+    meta: { title: '商机详情' }
+  },
+  {
+    path: '/crm/transfer',
+    name: 'CustomerTransfer',
+    component: () => import('../views/customer/CustomerTransfer.vue'),
+    meta: { title: '客户移交' }
+  },
+  {
+    path: '/crm/equipment',
+    name: 'EquipmentManagement',
+    component: () => import('../views/customer/EquipmentList.vue'),
+    meta: { title: '设备台账' }
+  },
+  {
+    path: '/crm/dashboard',
+    name: 'CRMDashboard',
+    component: () => import('../views/customer/CRMDashboard.vue'),
+    meta: { title: 'CRM看板' }
+  },
   // 销售管理
   {
     path: '/sales',

@@ -42,4 +42,9 @@ router.get('/pool/statistics', authenticateToken, customerController.getCustomer
 router.post('/:id/submit-approval', authenticateToken, customerController.submitCustomerApproval);
 router.get('/approvals/list', authenticateToken, customerController.getCustomerApprovalList);
 
+// 客户移交路由
+router.post('/transfer', authenticateToken, customerController.transferCustomer);
+router.post('/transfer/batch', authenticateToken, customerController.batchTransferCustomers);
+router.get('/transfer/logs', authenticateToken, customerController.getTransferLogs);
+
 module.exports = router;
