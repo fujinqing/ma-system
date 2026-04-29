@@ -104,8 +104,8 @@ const routes = [
   },
   {
     path: '/crm/contracts',
-    name: 'ContractManagement',
-    component: () => import('../views/customer/ContractManagement.vue'),
+    name: 'CRMContractManagement',
+    component: () => import('../views/sales/ContractManagement.vue'),
     meta: { title: '合同管理' }
   },
   {
