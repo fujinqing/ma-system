@@ -84,6 +84,12 @@ const routes = [
     component: () => import('../views/customer/CRMDashboard.vue'),
     meta: { title: 'CRM看板' }
   },
+  {
+    path: '/crm/contracts',
+    name: 'ContractManagement',
+    component: () => import('../views/customer/ContractManagement.vue'),
+    meta: { title: '合同管理' }
+  },
   // 销售管理
   {
     path: '/sales',

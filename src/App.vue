@@ -11,7 +11,7 @@
       <div class="sidebar-header">
         <i class="fa fa-cogs text-blue-600 mr-2"></i>
         <div class="system-title">
-          <div class="title-line1">M-A</div>
+          <div class="title-line1">M-Automation</div>
           <div class="title-line2">运营系统</div>
         </div>
       </div>
@@ -33,6 +33,7 @@
           <router-link to="/crm/transfer" class="submenu-item" active-class="active">客户移交</router-link>
           <router-link to="/crm/equipment" class="submenu-item" active-class="active">设备台账</router-link>
           <router-link to="/crm/dashboard" class="submenu-item" active-class="active">CRM数据看板</router-link>
+          <router-link to="/crm/contracts" class="submenu-item" active-class="active">合同管理</router-link>
           <router-link to="/crm/competitors" class="submenu-item" active-class="active">竞争对手管理</router-link>
           <router-link to="/crm/activities" class="submenu-item" active-class="active">内部协作</router-link>
         </div>

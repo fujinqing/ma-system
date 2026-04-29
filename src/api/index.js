@@ -159,6 +159,17 @@ export default {
   getRepairRequests: (params) => apiClient.get('/crm/repairs', { params }),
   createRepairRequest: (data) => apiClient.post('/crm/repairs', data),
 
+  // 客户合同与回款
+  getCustomerContracts: (params) => apiClient.get('/crm/contracts', { params }),
+  getCustomerContract: (id) => apiClient.get(`/crm/contracts/${id}`),
+  createCustomerContract: (data) => apiClient.post('/crm/contracts', data),
+  updateCustomerContract: (id, data) => apiClient.put(`/crm/contracts/${id}`, data),
+  deleteCustomerContract: (id) => apiClient.delete(`/crm/contracts/${id}`),
+  getCustomerContractStatistics: () => apiClient.get('/crm/contracts/stats'),
+  getCustomerContractsByCustomer: (customerId) => apiClient.get(`/crm/contracts/customer/${customerId}`),
+  addPaymentPlan: (data) => apiClient.post('/crm/contracts/payment-plan', data),
+  addPaymentRecord: (data) => apiClient.post('/crm/contracts/payment-record', data),
+
   // 仪表盘统计
   getDashboardStats: () => apiClient.get('/dashboard/stats'),
   
