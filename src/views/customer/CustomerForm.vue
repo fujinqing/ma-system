@@ -407,24 +407,24 @@ export default {
     async loadSalesUsers() {
       try {
         const response = await api.getSalesUsers()
-        if (response.success) {
+        if (response && response.success) {
           this.salesUsers = response.data
         }
       } catch (error) {
-        console.error('获取销售用户失败:', error)
+        console.warn('获取销售用户失败:', error)
       }
     },
     async loadCustomerData() {
       try {
         const response = await api.getCustomer(this.customerId)
-        if (response.success) {
+        if (response && response.success) {
           this.customerForm = {
             ...this.customerForm,
             ...response.data
           }
         }
       } catch (error) {
-        console.error('获取客户数据失败:', error)
+        console.warn('获取客户数据失败:', error)
         this.$message.error('获取客户数据失败')
       }
     },

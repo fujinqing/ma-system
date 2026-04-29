@@ -139,7 +139,7 @@ export default {
           this.$message.error(response?.message || '获取竞争对手数据失败')
         }
       } catch (error) {
-        console.error('获取竞争对手数据异常:', error)
+        console.warn('获取竞争对手数据异常:', error)
         this.$message.error('获取竞争对手数据失败')
       } finally {
         this.loading = false
@@ -175,15 +175,15 @@ export default {
           type: 'warning'
         })
         const response = await api.deleteCompetitor(id)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('删除成功')
           this.loadCompetitors()
         } else {
-          this.$message.error(response.message || '删除失败')
+          this.$message.error(response?.message || '删除失败')
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除竞争对手失败:', error)
+          console.warn('删除竞争对手失败:', error)
           this.$message.error('删除竞争对手失败')
         }
       }

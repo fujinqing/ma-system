@@ -326,11 +326,11 @@ export default {
       this.loading = true
       try {
         const response = await api.getCustomer(this.customerId)
-        if (response.success) {
+        if (response && response.success) {
           this.customer = response.data
         }
       } catch (error) {
-        console.error('获取客户详情失败:', error)
+        console.warn('获取客户详情失败:', error)
         this.$message.error('获取客户详情失败')
       } finally {
         this.loading = false
@@ -339,11 +339,11 @@ export default {
     async loadContacts() {
       try {
         const response = await api.getCustomerContacts(this.customerId)
-        if (response.success) {
+        if (response && response.success) {
           this.contacts = response.data
         }
       } catch (error) {
-        console.error('获取联系人失败:', error)
+        console.warn('获取联系人失败:', error)
       }
     },
     async loadActivities() {
@@ -352,12 +352,12 @@ export default {
           page: this.activitiesPage,
           limit: this.activitiesLimit
         })
-        if (response.success) {
+        if (response && response.success) {
           this.activities = response.data.activities
           this.activitiesTotal = response.data.pagination.total
         }
       } catch (error) {
-        console.error('获取跟进记录失败:', error)
+        console.warn('获取跟进记录失败:', error)
       }
     },
     goBack() {
@@ -374,13 +374,13 @@ export default {
           type: 'warning'
         })
         const response = await api.deleteCustomer(this.customerId)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('删除成功')
           this.$router.push('/crm')
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除客户失败:', error)
+          console.warn('删除客户失败:', error)
           this.$message.error('删除客户失败')
         }
       }
@@ -402,14 +402,14 @@ export default {
       }
       try {
         const response = await api.addCustomerActivity(this.customerId, this.activityForm)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('添加成功')
           this.activityDialogVisible = false
           this.loadActivities()
           this.loadCustomer()
         }
       } catch (error) {
-        console.error('添加跟进记录失败:', error)
+        console.warn('添加跟进记录失败:', error)
         this.$message.error('添加跟进记录失败')
       }
     },
@@ -447,13 +447,13 @@ export default {
         } else {
           response = await api.addCustomerContact(this.customerId, this.contactForm)
         }
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success(this.isEditContact ? '更新成功' : '添加成功')
           this.contactDialogVisible = false
           this.loadContacts()
         }
       } catch (error) {
-        console.error('保存联系人失败:', error)
+        console.warn('保存联系人失败:', error)
         this.$message.error('保存联系人失败')
       }
     },
@@ -461,13 +461,13 @@ export default {
       try {
         await this.$confirm('确定要删除此联系人吗？', '删除确认', { type: 'warning' })
         const response = await api.deleteCustomerContact(this.customerId, contactId)
-        if (response.success) {
+        if (response && response.success) {
           this.$message.success('删除成功')
           this.loadContacts()
         }
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除联系人失败:', error)
+          console.warn('删除联系人失败:', error)
           this.$message.error('删除联系人失败')
         }
       }

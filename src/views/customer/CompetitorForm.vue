@@ -145,13 +145,13 @@ export default {
     async loadCompetitor() {
       try {
         const response = await api.getCompetitor(this.competitorId)
-        if (response.success) {
+        if (response && response.success) {
           this.competitorForm = response.data
         } else {
-          this.$message.error(response.message || '获取竞争对手信息失败')
+          this.$message.error(response?.message || '获取竞争对手信息失败')
         }
       } catch (error) {
-        console.error('获取竞争对手信息异常:', error)
+        console.warn('获取竞争对手信息异常:', error)
         this.$message.error('获取竞争对手信息失败')
       }
     },
@@ -165,14 +165,14 @@ export default {
             } else {
               response = await api.createCompetitor(this.competitorForm)
             }
-            if (response.success) {
+            if (response && response.success) {
               this.$message.success(this.isEdit ? '更新成功' : '创建成功')
               this.goBack()
             } else {
-              this.$message.error(response.message || (this.isEdit ? '更新失败' : '创建失败'))
+              this.$message.error(response?.message || (this.isEdit ? '更新失败' : '创建失败'))
             }
           } catch (error) {
-            console.error(this.isEdit ? '更新竞争对手失败:' : '创建竞争对手失败:', error)
+            console.warn(this.isEdit ? '更新竞争对手失败:' : '创建竞争对手失败:', error)
             this.$message.error(this.isEdit ? '更新竞争对手失败' : '创建竞争对手失败')
           }
         }
