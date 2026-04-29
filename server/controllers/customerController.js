@@ -174,108 +174,132 @@ const createCustomer = async (req, res) => {
       cooperation_years, tags, customer_pool_type
     } = req.body;
 
-    const pool = await getPool();
-
-    const maxCodeResult = await pool.request().query(`
-      SELECT TOP 1 code FROM customers WHERE code IS NOT NULL ORDER BY code DESC
-    `);
-    let newCode = 'CUST00001';
-    if (maxCodeResult.recordset.length > 0) {
-      const maxCode = maxCodeResult.recordset[0].code;
-      const num = parseInt(maxCode.replace('CUST', '')) + 1;
-      newCode = 'CUST' + num.toString().padStart(5, '0');
+    if (!name || name.trim() === '') {
+      return res.status(400).json(res.formatResponse(false, null, '客户名称不能为空'));
     }
 
-    const result = await pool.request()
-      .input('name', sql.NVarChar, name)
-      .input('short_name', sql.NVarChar, short_name)
-      .input('customer_type', sql.NVarChar, customer_type || 'potential')
-      .input('enterprise_category', sql.NVarChar, enterprise_category || null)
-      .input('source', sql.NVarChar, source)
-      .input('industry', sql.NVarChar, industry)
-      .input('equipment_type', sql.NVarChar, equipment_type || null)
-      .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
-      .input('cooperation_level', sql.NVarChar, cooperation_level || null)
-      .input('region', sql.NVarChar, region || null)
-      .input('main_equipment', sql.NVarChar, main_equipment || null)
-      .input('level', sql.NVarChar, level || 'normal')
-      .input('status', sql.NVarChar, status || 'active')
-      .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
-      .input('contact_person', sql.NVarChar, contact_person)
-      .input('contact_phone', sql.NVarChar, contact_phone)
-      .input('contact_email', sql.NVarChar, email)
-      .input('contact_position', sql.NVarChar, contact_position)
-      .input('address', sql.NVarChar, factory_address || address)
-      .input('website', sql.NVarChar, website)
-      .input('bank', sql.NVarChar, bank)
-      .input('bank_account', sql.NVarChar, bank_account)
-      .input('tax_id', sql.NVarChar, tax_id)
-      .input('annual_revenue', sql.Decimal(18, 2), annual_revenue ? parseFloat(annual_revenue) : null)
-      .input('employee_count', sql.Int, employee_count ? parseInt(employee_count) : null)
-      .input('main_products', sql.NVarChar, main_products)
-      .input('company_scale', sql.NVarChar, company_scale)
-      .input('cooperation_years', sql.Int, cooperation_years ? parseInt(cooperation_years) : null)
-      .input('sales_id', sql.Int, sales_id ? parseInt(sales_id) : null)
-      .input('code', sql.NVarChar, newCode)
-      .input('remarks', sql.NVarChar, remarks)
-      .input('tags', sql.NVarChar, Array.isArray(tags) ? tags.join(',') : tags)
-      .query(`
-        INSERT INTO customers (
-          code, name, short_name, customer_type, enterprise_category, source, industry,
-          equipment_type, annual_purchase_amount, cooperation_level, region, main_equipment,
-          level, status, customer_pool_type,
-          contact_person, contact_phone, contact_email, contact_position, address,
-          website, bank, bank_account, tax_id, annual_revenue, employee_count,
-          main_products, company_scale, cooperation_years, sales_id, remarks, tags
-        ) VALUES (
-          @code, @name, @short_name, @customer_type, @enterprise_category, @source, @industry,
-          @equipment_type, @annual_purchase_amount, @cooperation_level, @region, @main_equipment,
-          @level, @status, @customer_pool_type,
-          @contact_person, @contact_phone, @contact_email, @contact_position, @address,
-          @website, @bank, @bank_account, @tax_id, @annual_revenue, @employee_count,
-          @main_products, @company_scale, @cooperation_years, @sales_id, @remarks, @tags
-        )
-        SELECT SCOPE_IDENTITY() as id;
+    let pool;
+    try {
+      pool = await getPool();
+    } catch (dbErr) {
+      console.error('数据库连接失败:', dbErr);
+      return res.status(500).json(res.formatResponse(false, null, '数据库连接失败'));
+    }
+
+    let newCode = 'CUST00001';
+    try {
+      const maxCodeResult = await pool.request().query(`
+        SELECT TOP 1 code FROM customers WHERE code IS NOT NULL ORDER BY code DESC
       `);
+      if (maxCodeResult.recordset.length > 0) {
+        const maxCode = maxCodeResult.recordset[0].code;
+        const num = parseInt(maxCode.replace('CUST', '')) + 1;
+        newCode = 'CUST' + num.toString().padStart(5, '0');
+      }
+    } catch (codeErr) {
+      console.warn('生成客户编码失败，使用默认编码:', codeErr.message);
+    }
 
-    const newCustomerId = result.recordset[0].id;
-    await AuditLog.log('CREATE_CUSTOMER', req.user?.id, { customerId: newCustomerId, name, code: newCode }, req);
+    let newCustomerId;
+    try {
+      const result = await pool.request()
+        .input('name', sql.NVarChar, name ? name.trim() : null)
+        .input('short_name', sql.NVarChar, short_name || null)
+        .input('customer_type', sql.NVarChar, customer_type || 'potential')
+        .input('enterprise_category', sql.NVarChar, enterprise_category || null)
+        .input('source', sql.NVarChar, source || null)
+        .input('industry', sql.NVarChar, industry || null)
+        .input('equipment_type', sql.NVarChar, equipment_type || null)
+        .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
+        .input('cooperation_level', sql.NVarChar, cooperation_level || null)
+        .input('region', sql.NVarChar, region || null)
+        .input('main_equipment', sql.NVarChar, main_equipment || null)
+        .input('level', sql.NVarChar, level || 'normal')
+        .input('status', sql.NVarChar, status || 'active')
+        .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
+        .input('contact_person', sql.NVarChar, contact_person || null)
+        .input('contact_phone', sql.NVarChar, contact_phone || null)
+        .input('contact_email', sql.NVarChar, email || null)
+        .input('contact_position', sql.NVarChar, contact_position || null)
+        .input('address', sql.NVarChar, (factory_address || address) || null)
+        .input('website', sql.NVarChar, website || null)
+        .input('bank', sql.NVarChar, bank || null)
+        .input('bank_account', sql.NVarChar, bank_account || null)
+        .input('tax_id', sql.NVarChar, tax_id || null)
+        .input('annual_revenue', sql.Decimal(18, 2), annual_revenue ? parseFloat(annual_revenue) : null)
+        .input('employee_count', sql.Int, employee_count ? parseInt(employee_count) : null)
+        .input('main_products', sql.NVarChar, main_products || null)
+        .input('company_scale', sql.NVarChar, company_scale || null)
+        .input('cooperation_years', sql.Int, cooperation_years ? parseInt(cooperation_years) : null)
+        .input('sales_id', sql.Int, sales_id ? parseInt(sales_id) : null)
+        .input('code', sql.NVarChar, newCode)
+        .input('remarks', sql.NVarChar, remarks || null)
+        .input('tags', sql.NVarChar, Array.isArray(tags) ? tags.join(',') : (tags || ''))
+        .query(`
+          INSERT INTO customers (
+            code, name, short_name, customer_type, enterprise_category, source, industry,
+            equipment_type, annual_purchase_amount, cooperation_level, region, main_equipment,
+            level, status, customer_pool_type,
+            contact_person, contact_phone, contact_email, contact_position, address,
+            website, bank, bank_account, tax_id, annual_revenue, employee_count,
+            main_products, company_scale, cooperation_years, sales_id, remarks, tags
+          ) VALUES (
+            @code, @name, @short_name, @customer_type, @enterprise_category, @source, @industry,
+            @equipment_type, @annual_purchase_amount, @cooperation_level, @region, @main_equipment,
+            @level, @status, @customer_pool_type,
+            @contact_person, @contact_phone, @contact_email, @contact_position, @address,
+            @website, @bank, @bank_account, @tax_id, @annual_revenue, @employee_count,
+            @main_products, @company_scale, @cooperation_years, @sales_id, @remarks, @tags
+          )
+          SELECT SCOPE_IDENTITY() as id;
+        `);
+      newCustomerId = result.recordset[0].id;
+    } catch (insertErr) {
+      console.error('插入客户数据失败:', insertErr);
+      return res.status(500).json(res.formatResponse(false, null, '创建客户失败: ' + insertErr.message));
+    }
 
-    publishCustomerEvent('create', {
-      id: newCustomerId,
-      code: newCode,
-      name,
-      short_name,
-      enterprise_category,
-      level,
-      customer_type,
-      customer_pool_type,
-      industry,
-      equipment_type,
-      annual_purchase_amount,
-      cooperation_level,
-      region,
-      main_equipment,
-      main_products,
-      company_scale,
-      cooperation_years,
-      sales_id,
-      status: 'active'
-    }, req.user?.name || req.user?.username);
+    try {
+      await AuditLog.log('CREATE_CUSTOMER', req.user?.id, { customerId: newCustomerId, name, code: newCode }, req);
+    } catch (auditErr) {
+      console.warn('审计日志记录失败:', auditErr.message);
+    }
+
+    try {
+      publishCustomerEvent('create', {
+        id: newCustomerId,
+        code: newCode,
+        name: name,
+        short_name: short_name,
+        enterprise_category,
+        level: level || 'normal',
+        customer_type: customer_type || 'potential',
+        customer_pool_type: customer_pool_type || 'public',
+        industry,
+        equipment_type,
+        annual_purchase_amount,
+        cooperation_level,
+        region,
+        main_equipment,
+        main_products,
+        company_scale,
+        cooperation_years,
+        sales_id,
+        status: 'active'
+      }, req.user?.name || req.user?.username);
+    } catch (eventErr) {
+      console.warn('发布客户创建事件失败:', eventErr.message);
+    }
 
     res.json(res.formatResponse(true, { id: newCustomerId, code: newCode }, '客户创建成功'));
   } catch (error) {
-    console.error('创建客户失败:', error);
+    console.error('创建客户系统异常:', error);
     res.status(500).json(res.formatResponse(false, null, '创建客户失败'));
   }
 };
 
 const updateCustomer = async (req, res) => {
   try {
-    console.log('更新客户接口被调用:', req.method, req.path);
-    console.log('请求参数:', req.params);
-    console.log('请求体:', req.body);
-    
     const { id } = req.params;
     const {
       name, short_name, customer_type, enterprise_category, source, industry,
@@ -287,116 +311,146 @@ const updateCustomer = async (req, res) => {
       last_contact_date, factory_address, company_scale, cooperation_years, tags
     } = req.body;
 
-    console.log('更新客户 - 销售ID:', sales_id, '类型:', typeof sales_id);
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json(res.formatResponse(false, null, '无效的客户ID'));
+    }
 
-    const pool = await getPool();
-    
-    // 检查客户是否存在
-    const checkResult = await pool.request()
-      .input('id', sql.Int, id)
-      .query('SELECT id FROM customers WHERE id = @id');
-    
-    if (checkResult.recordset.length === 0) {
+    if (!name || name.trim() === '') {
+      return res.status(400).json(res.formatResponse(false, null, '客户名称不能为空'));
+    }
+
+    let pool;
+    try {
+      pool = await getPool();
+    } catch (dbErr) {
+      console.error('数据库连接失败:', dbErr);
+      return res.status(500).json(res.formatResponse(false, null, '数据库连接失败'));
+    }
+
+    let customerExists = false;
+    try {
+      const checkResult = await pool.request()
+        .input('id', sql.Int, id)
+        .query('SELECT id FROM customers WHERE id = @id');
+      customerExists = checkResult.recordset.length > 0;
+    } catch (checkErr) {
+      console.error('检查客户存在性失败:', checkErr);
+      return res.status(500).json(res.formatResponse(false, null, '检查客户失败'));
+    }
+
+    if (!customerExists) {
       return res.status(404).json(res.formatResponse(false, null, '客户不存在'));
     }
 
-    // 更新客户信息
-    await pool.request()
-      .input('id', sql.Int, id)
-      .input('name', sql.NVarChar, name)
-      .input('short_name', sql.NVarChar, short_name)
-      .input('customer_type', sql.NVarChar, customer_type)
-      .input('enterprise_category', sql.NVarChar, enterprise_category || null)
-      .input('source', sql.NVarChar, source)
-      .input('industry', sql.NVarChar, industry)
-      .input('equipment_type', sql.NVarChar, equipment_type || null)
-      .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
-      .input('cooperation_level', sql.NVarChar, cooperation_level || null)
-      .input('region', sql.NVarChar, region || null)
-      .input('main_equipment', sql.NVarChar, main_equipment || null)
-      .input('level', sql.NVarChar, level)
-      .input('status', sql.NVarChar, status)
-      .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
-      .input('contact_person', sql.NVarChar, contact_person)
-      .input('contact_phone', sql.NVarChar, contact_phone)
-      .input('contact_email', sql.NVarChar, email)
-      .input('contact_position', sql.NVarChar, contact_position)
-      .input('address', sql.NVarChar, factory_address || address)
-      .input('website', sql.NVarChar, website)
-      .input('bank', sql.NVarChar, bank)
-      .input('bank_account', sql.NVarChar, bank_account)
-      .input('tax_id', sql.NVarChar, tax_id)
-      .input('annual_revenue', sql.Decimal(18, 2), annual_revenue ? parseFloat(annual_revenue) : null)
-      .input('employee_count', sql.Int, employee_count ? parseInt(employee_count) : null)
-      .input('main_products', sql.NVarChar, main_products)
-      .input('company_scale', sql.NVarChar, company_scale)
-      .input('cooperation_years', sql.Int, cooperation_years ? parseInt(cooperation_years) : null)
-      .input('sales_id', sql.Int, sales_id ? parseInt(sales_id) : null)
-      .input('assigned_date', sql.Date, assigned_date || null)
-      .input('lost_reason', sql.NVarChar, lost_reason)
-      .input('remarks', sql.NVarChar, remarks)
-      .input('last_contact_date', sql.Date, last_contact_date || null)
-      .input('tags', sql.NVarChar, Array.isArray(tags) ? tags.join(',') : tags)
-      .query(`
-        UPDATE customers SET
-          name = @name,
-          short_name = @short_name,
-          customer_type = @customer_type,
-          enterprise_category = @enterprise_category,
-          source = @source,
-          industry = @industry,
-          equipment_type = @equipment_type,
-          annual_purchase_amount = @annual_purchase_amount,
-          cooperation_level = @cooperation_level,
-          region = @region,
-          main_equipment = @main_equipment,
-          level = @level,
-          status = @status,
-          customer_pool_type = @customer_pool_type,
-          contact_person = @contact_person,
-          contact_phone = @contact_phone,
-          contact_email = @contact_email,
-          contact_position = @contact_position,
-          address = @address,
-          website = @website,
-          bank = @bank,
-          bank_account = @bank_account,
-          tax_id = @tax_id,
-          annual_revenue = @annual_revenue,
-          employee_count = @employee_count,
-          main_products = @main_products,
-          company_scale = @company_scale,
-          cooperation_years = @cooperation_years,
-          sales_id = @sales_id,
-          assigned_date = @assigned_date,
-          lost_reason = @lost_reason,
-          remarks = @remarks,
-          last_contact_date = @last_contact_date,
-          tags = @tags,
-          updated_at = GETDATE()
-        WHERE id = @id
-      `);
+    let updatedData = null;
+    try {
+      await pool.request()
+        .input('id', sql.Int, id)
+        .input('name', sql.NVarChar, name ? name.trim() : null)
+        .input('short_name', sql.NVarChar, short_name || null)
+        .input('customer_type', sql.NVarChar, customer_type || null)
+        .input('enterprise_category', sql.NVarChar, enterprise_category || null)
+        .input('source', sql.NVarChar, source || null)
+        .input('industry', sql.NVarChar, industry || null)
+        .input('equipment_type', sql.NVarChar, equipment_type || null)
+        .input('annual_purchase_amount', sql.Decimal(18, 2), annual_purchase_amount ? parseFloat(annual_purchase_amount) : null)
+        .input('cooperation_level', sql.NVarChar, cooperation_level || null)
+        .input('region', sql.NVarChar, region || null)
+        .input('main_equipment', sql.NVarChar, main_equipment || null)
+        .input('level', sql.NVarChar, level || null)
+        .input('status', sql.NVarChar, status || null)
+        .input('customer_pool_type', sql.NVarChar, customer_pool_type || 'public')
+        .input('contact_person', sql.NVarChar, contact_person || null)
+        .input('contact_phone', sql.NVarChar, contact_phone || null)
+        .input('contact_email', sql.NVarChar, email || null)
+        .input('contact_position', sql.NVarChar, contact_position || null)
+        .input('address', sql.NVarChar, (factory_address || address) || null)
+        .input('website', sql.NVarChar, website || null)
+        .input('bank', sql.NVarChar, bank || null)
+        .input('bank_account', sql.NVarChar, bank_account || null)
+        .input('tax_id', sql.NVarChar, tax_id || null)
+        .input('annual_revenue', sql.Decimal(18, 2), annual_revenue ? parseFloat(annual_revenue) : null)
+        .input('employee_count', sql.Int, employee_count ? parseInt(employee_count) : null)
+        .input('main_products', sql.NVarChar, main_products || null)
+        .input('company_scale', sql.NVarChar, company_scale || null)
+        .input('cooperation_years', sql.Int, cooperation_years ? parseInt(cooperation_years) : null)
+        .input('sales_id', sql.Int, sales_id ? parseInt(sales_id) : null)
+        .input('assigned_date', sql.Date, assigned_date || null)
+        .input('lost_reason', sql.NVarChar, lost_reason || null)
+        .input('remarks', sql.NVarChar, remarks || null)
+        .input('last_contact_date', sql.Date, last_contact_date || null)
+        .input('tags', sql.NVarChar, Array.isArray(tags) ? tags.join(',') : (tags || ''))
+        .query(`
+          UPDATE customers SET
+            name = @name,
+            short_name = @short_name,
+            customer_type = @customer_type,
+            enterprise_category = @enterprise_category,
+            source = @source,
+            industry = @industry,
+            equipment_type = @equipment_type,
+            annual_purchase_amount = @annual_purchase_amount,
+            cooperation_level = @cooperation_level,
+            region = @region,
+            main_equipment = @main_equipment,
+            level = @level,
+            status = @status,
+            customer_pool_type = @customer_pool_type,
+            contact_person = @contact_person,
+            contact_phone = @contact_phone,
+            contact_email = @contact_email,
+            contact_position = @contact_position,
+            address = @address,
+            website = @website,
+            bank = @bank,
+            bank_account = @bank_account,
+            tax_id = @tax_id,
+            annual_revenue = @annual_revenue,
+            employee_count = @employee_count,
+            main_products = @main_products,
+            company_scale = @company_scale,
+            cooperation_years = @cooperation_years,
+            sales_id = @sales_id,
+            assigned_date = @assigned_date,
+            lost_reason = @lost_reason,
+            remarks = @remarks,
+            last_contact_date = @last_contact_date,
+            tags = @tags,
+            updated_at = GETDATE()
+          WHERE id = @id
+        `);
 
-    // 获取更新后的客户信息
-    const updatedCustomer = await pool.request()
-      .input('id', sql.Int, id)
-      .query(`
-        SELECT c.*, u.name as sales_name, u.phone as sales_phone, u.email as sales_email
-        FROM customers c
-        LEFT JOIN sys_users u ON c.sales_id = u.id
-        WHERE c.id = @id
-      `);
-
-    await AuditLog.log('UPDATE_CUSTOMER', req.user?.id, { customerId: id }, req);
-
-    const updatedData = updatedCustomer.recordset[0];
-    if (updatedData) {
-      publishCustomerEvent('update', updatedData, req.user?.name || req.user?.username);
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`
+          SELECT c.*, u.name as sales_name, u.phone as sales_phone, u.email as sales_email
+          FROM customers c
+          LEFT JOIN sys_users u ON c.sales_id = u.id
+          WHERE c.id = @id
+        `);
+      updatedData = result.recordset[0];
+    } catch (updateErr) {
+      console.error('更新客户数据失败:', updateErr);
+      return res.status(500).json(res.formatResponse(false, null, '更新客户失败: ' + updateErr.message));
     }
 
-    res.json(res.formatResponse(true, updatedCustomer.recordset[0], '客户更新成功'));
+    try {
+      await AuditLog.log('UPDATE_CUSTOMER', req.user?.id, { customerId: id }, req);
+    } catch (auditErr) {
+      console.warn('审计日志记录失败:', auditErr.message);
+    }
+
+    try {
+      if (updatedData) {
+        publishCustomerEvent('update', updatedData, req.user?.name || req.user?.username);
+      }
+    } catch (eventErr) {
+      console.warn('发布更新事件失败:', eventErr.message);
+    }
+
+    res.json(res.formatResponse(true, updatedData, '客户更新成功'));
   } catch (error) {
-    console.error('更新客户失败:', error);
+    console.error('更新客户系统异常:', error);
     res.status(500).json(res.formatResponse(false, null, '更新客户失败'));
   }
 };
